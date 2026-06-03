@@ -42,24 +42,44 @@ def ingest_payload(channel_doc, payload):
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-def telegram(channel=None):
+def telegram(channel=None, debug=None):
 	"""Telegram webhook. URL carries ?channel=<Inbox Channel name>.
 
 	Telegram authenticates via the X-Telegram-Bot-Api-Secret-Token header, set
 	when the webhook is registered.
+
+	Debug: append ``&debug=1`` to log the raw request to logs/sopwer_inbox.log
+	and return immediately WITHOUT verifying the secret or touching the database —
+	use it to confirm whether requests actually reach this code.
 	"""
-	if not channel:
-		frappe.throw(_("Missing channel parameter"))
-	channel_doc = frappe.get_doc("Inbox Channel", channel)
+	log = frappe.logger("sopwer_inbox", allow_site=True)
+	raw = frappe.request.get_data(as_text=True) if getattr(frappe, "request", None) else ""
+	log.info(
+		"telegram webhook HIT | channel=%r debug=%r secret_header=%r expect=%r body_len=%s body=%s",
+		channel,
+		debug,
+		frappe.get_request_header(TELEGRAM_SECRET_HEADER),
+		frappe.get_request_header("Expect"),
+		len(raw or ""),
+		(raw or "")[:2000],
+	)
 
-	provided = frappe.get_request_header(TELEGRAM_SECRET_HEADER)
-	verify_secret(channel_doc, provided)
+	if frappe.utils.cint(debug):
+		# Debug mode: log only. No secret check, no parsing, no DB writes.
+		return {"ok": True, "debug": True, "received_bytes": len(raw or "")}
 
-	raw = frappe.request.get_data(as_text=True) if frappe.request else "{}"
-	payload = json.loads(raw or "{}")
-
-	ingest_payload(channel_doc, payload)
-	return {"ok": True}
+	try:
+		if not channel:
+			frappe.throw(_("Missing channel parameter"))
+		channel_doc = frappe.get_doc("Inbox Channel", channel)
+		verify_secret(channel_doc, frappe.get_request_header(TELEGRAM_SECRET_HEADER))
+		payload = json.loads(raw or "{}")
+		results = ingest_payload(channel_doc, payload)
+		log.info("telegram webhook OK | channel=%r ingested=%s", channel, len(results))
+		return {"ok": True}
+	except Exception:
+		log.error("telegram webhook FAILED | channel=%r\n%s", channel, frappe.get_traceback())
+		raise
 
 
 @frappe.whitelist()
