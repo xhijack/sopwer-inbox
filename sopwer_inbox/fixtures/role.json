@@ -1,0 +1,18 @@
+[
+ {
+  "doctype": "Role",
+  "name": "Inbox Agent",
+  "role_name": "Inbox Agent",
+  "desk_access": 1,
+  "two_factor_auth": 0,
+  "restrict_to_domain": null
+ },
+ {
+  "doctype": "Role",
+  "name": "Inbox Manager",
+  "role_name": "Inbox Manager",
+  "desk_access": 1,
+  "two_factor_auth": 0,
+  "restrict_to_domain": null
+ }
+]

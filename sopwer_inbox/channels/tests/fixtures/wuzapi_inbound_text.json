@@ -1,0 +1,15 @@
+{
+  "type": "Message",
+  "event": {
+    "Info": {
+      "ID": "3EB0XYZ123",
+      "Chat": "628123344556@s.whatsapp.net",
+      "Sender": "628123344556@s.whatsapp.net",
+      "PushName": "Budi Santoso",
+      "Timestamp": "2026-06-03 09:12:00"
+    },
+    "Message": {
+      "conversation": "Halo min, pesanan saya kok belum sampai ya?"
+    }
+  }
+}

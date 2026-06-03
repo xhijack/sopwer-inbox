@@ -1,0 +1,16 @@
+[
+ {
+  "doctype": "Custom Field",
+  "name": "Contact-inbox_notes",
+  "dt": "Contact",
+  "module": "Sopwer Inbox",
+  "fieldname": "inbox_notes",
+  "label": "Inbox Notes",
+  "fieldtype": "Long Text",
+  "insert_after": "company_name",
+  "description": "Sticky internal note about this contact, shown every time they message (Sopwer Inbox).",
+  "translatable": 0,
+  "hidden": 0,
+  "read_only": 0
+ }
+]

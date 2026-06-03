@@ -1,0 +1,18 @@
+{
+  "index.html": {
+    "file": "assets/index-C8QkbhEQ.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "css": [
+      "assets/index-DsTkGR9A.css"
+    ],
+    "assets": [
+      "assets/sopwer-logo-full-C3nTrP0E.png"
+    ]
+  },
+  "src/assets/sopwer-logo-full.png": {
+    "file": "assets/sopwer-logo-full-C3nTrP0E.png",
+    "src": "src/assets/sopwer-logo-full.png"
+  }
+}

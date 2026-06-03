@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sopwer Inbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Frappe boot/CSRF injected by www/inbox.html in production. Dev defaults below. -->
+    <script>
+      window.csrf_token = window.csrf_token || "{{ csrf_token }}";
+      if (window.csrf_token && window.csrf_token.indexOf("{{") === 0) {
+        window.csrf_token = "";
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/sopwer_inbox/frontend/assets/index-C8QkbhEQ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/sopwer_inbox/frontend/assets/index-DsTkGR9A.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

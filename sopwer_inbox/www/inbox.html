@@ -1,0 +1,49 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Sopwer Inbox{% endblock %}
+
+{% block head_include %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+	href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+	rel="stylesheet"
+/>
+<style>
+	html, body { margin: 0; padding: 0; height: 100%; background: #f8fafc; overflow: hidden; }
+	#navbar, .navbar, footer, .web-footer, .page-head, .web-footer-wrapper { display: none !important; }
+	/* Neutralize Frappe's web wrapper (main.container.my-4 adds margins + max-width). */
+	.main-section, .page_content, .page-content-wrapper,
+	main, main.container, main.container.my-4 {
+		padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important;
+	}
+	/* Full-viewport SPA, escaping any residual wrapper offset. */
+	#root { position: fixed; inset: 0; overflow: hidden; background: #f8fafc; }
+</style>
+{% if entry %}
+	{% for href in entry.css %}
+	<link rel="stylesheet" href="{{ href }}" />
+	{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block page_content %}
+<div id="root"></div>
+
+<script>
+	window.csrf_token = "{{ csrf_token }}";
+	window.socketio_port = "{{ socketio_port }}";
+	window.frappe = window.frappe || {};
+	window.frappe.boot = JSON.parse({{ boot | tojson }});
+</script>
+
+{% if entry %}
+<script type="module" src="{{ entry.js }}"></script>
+{% else %}
+<div style="padding:40px;font-family:sans-serif;color:#475569">
+	<h2 style="margin:0 0 8px">Sopwer Inbox belum di-build</h2>
+	<p>Jalankan <code>cd apps/sopwer_inbox/frontend &amp;&amp; npm install &amp;&amp; npm run build</code>, lalu muat ulang halaman ini.</p>
+</div>
+{% endif %}
+{% endblock %}

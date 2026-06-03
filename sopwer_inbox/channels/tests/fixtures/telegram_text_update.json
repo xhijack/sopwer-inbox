@@ -1,0 +1,20 @@
+{
+  "update_id": 100001,
+  "message": {
+    "message_id": 4567,
+    "from": {
+      "id": 8891234,
+      "is_bot": false,
+      "first_name": "Budi",
+      "last_name": "Santoso",
+      "username": "budisan"
+    },
+    "chat": {
+      "id": 8891234,
+      "first_name": "Budi",
+      "type": "private"
+    },
+    "date": 1717400000,
+    "text": "Halo min, pesanan saya kok belum sampai ya?"
+  }
+}

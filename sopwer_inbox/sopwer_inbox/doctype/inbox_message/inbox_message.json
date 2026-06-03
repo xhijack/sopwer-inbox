@@ -1,0 +1,162 @@
+{
+ "actions": [],
+ "autoname": "autoincrement",
+ "creation": "2026-06-03 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "conversation",
+  "direction",
+  "is_internal",
+  "column_break_head",
+  "sender_type",
+  "sender_user",
+  "message_section",
+  "message_type",
+  "content",
+  "media_file",
+  "meta_section",
+  "external_message_id",
+  "delivery_status",
+  "message_timestamp"
+ ],
+ "fields": [
+  {
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Conversation",
+   "options": "Inbox Conversation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Direction",
+   "options": "Incoming\nOutgoing",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Internal note between agents. If checked, this message is NEVER sent to the customer.",
+   "fieldname": "is_internal",
+   "fieldtype": "Check",
+   "label": "Is Internal Note"
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sender_type",
+   "fieldtype": "Select",
+   "label": "Sender Type",
+   "options": "Contact\nAgent\nSystem"
+  },
+  {
+   "depends_on": "eval:doc.sender_type==\"Agent\"",
+   "fieldname": "sender_user",
+   "fieldtype": "Link",
+   "label": "Sender User",
+   "options": "User"
+  },
+  {
+   "fieldname": "message_section",
+   "fieldtype": "Section Break",
+   "label": "Message"
+  },
+  {
+   "default": "Text",
+   "fieldname": "message_type",
+   "fieldtype": "Select",
+   "label": "Message Type",
+   "options": "Text\nImage\nFile\nAudio\nVideo\nLocation"
+  },
+  {
+   "fieldname": "content",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Content"
+  },
+  {
+   "fieldname": "media_file",
+   "fieldtype": "Attach",
+   "label": "Media File"
+  },
+  {
+   "fieldname": "meta_section",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "description": "Message id at the source channel. Used for inbound deduplication.",
+   "fieldname": "external_message_id",
+   "fieldtype": "Data",
+   "label": "External Message ID"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "delivery_status",
+   "fieldtype": "Select",
+   "label": "Delivery Status",
+   "options": "Pending\nSent\nDelivered\nRead\nFailed"
+  },
+  {
+   "fieldname": "message_timestamp",
+   "fieldtype": "Datetime",
+   "label": "Message Timestamp"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Sopwer Inbox",
+ "name": "Inbox Message",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Inbox Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Inbox Agent",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

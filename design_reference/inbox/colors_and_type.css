@@ -1,0 +1,161 @@
+/* ========================================================================
+   Sopwer Design System — Colors & Type tokens
+   Source of truth for any HTML artifact that wants to feel like Sopwer.
+   ======================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ── PRIMARY · BLUE (Innovation, trust, kepemimpinan teknologi) ── */
+  --sw-blue-50:  #EAF3FC;
+  --sw-blue-100: #C9DFF5;
+  --sw-blue-200: #93BDEC;
+  --sw-blue-300: #5C9BE2;
+  --sw-blue-400: #3B86DC;
+  --sw-blue-500: #2E78D9;   /* primary brand */
+  --sw-blue-600: #1F5FB8;
+  --sw-blue-700: #154693;
+  --sw-blue-800: #0C3273;
+  --sw-blue-900: #061F4D;
+
+  /* ── SECONDARY · GREEN (Growth, kesegaran, kemajuan) ── */
+  --sw-green-50:  #F0FAEB;
+  --sw-green-100: #D9F1CB;
+  --sw-green-200: #B6E29A;
+  --sw-green-300: #91CE6A;
+  --sw-green-400: #75BE45;
+  --sw-green-500: #5CAB30;   /* secondary brand */
+  --sw-green-600: #468722;
+  --sw-green-700: #346719;
+  --sw-green-800: #244910;
+  --sw-green-900: #162E0A;
+
+  /* ── ACCENT · YELLOW (Energy, optimism, ide) ── */
+  --sw-yellow-50:  #FFF8E1;
+  --sw-yellow-100: #FFEDB3;
+  --sw-yellow-200: #FFDC75;
+  --sw-yellow-300: #FFC93C;
+  --sw-yellow-400: #FBB217;   /* accent brand */
+  --sw-yellow-500: #E69408;
+  --sw-yellow-600: #BD7806;
+  --sw-yellow-700: #935C04;
+  --sw-yellow-800: #6B4203;
+  --sw-yellow-900: #432901;
+
+  /* ── INK / NEUTRAL ── */
+  --sw-ink-900: #0B1220;
+  --sw-ink-800: #0F172A;
+  --sw-ink-700: #1F2937;
+  --sw-ink-600: #374151;
+  --sw-ink-500: #475569;
+  --sw-ink-400: #64748B;
+  --sw-ink-300: #94A3B8;
+  --sw-ink-200: #CBD5E1;
+  --sw-ink-100: #E2E8F0;
+  --sw-ink-50:  #F1F5F9;
+  --sw-paper:   #F8FAFC;
+  --sw-white:   #FFFFFF;
+
+  /* ── SEMANTIC ── */
+  --sw-success: #16A34A;
+  --sw-warning: #F59E0B;
+  --sw-error:   #DC2626;
+  --sw-info:    #2E78D9;
+
+  /* ── SEMANTIC SHORTHAND (use these in components) ── */
+  --bg:         var(--sw-paper);
+  --surface:    var(--sw-white);
+  --surface-2:  var(--sw-ink-50);
+  --fg-1:       var(--sw-ink-900);   /* main heading */
+  --fg-2:       var(--sw-ink-700);   /* body */
+  --fg-3:       var(--sw-ink-500);   /* secondary / caption */
+  --fg-4:       var(--sw-ink-400);   /* hint / disabled */
+  --line:       var(--sw-ink-100);
+  --line-strong:var(--sw-ink-200);
+  --brand:      var(--sw-blue-500);
+  --brand-hover:var(--sw-blue-600);
+
+  /* ── TYPOGRAPHY · families ── */
+  --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ── TYPE SCALE (use as font-size) ── */
+  --t-display-xl: 88px;   /* hero, 800 weight, -2% */
+  --t-display:    64px;   /* big page titles */
+  --t-h1:         36px;   /* section heading */
+  --t-h2:         22px;   /* subsection */
+  --t-h3:         18px;
+  --t-h4:         16px;
+  --t-lede:       18px;   /* lead paragraph */
+  --t-body:       15px;   /* body */
+  --t-small:      13px;
+  --t-caption:    12px;
+  --t-eyebrow:    11px;   /* uppercase tag, +0.18em tracking */
+  --t-mono-sm:    11px;
+
+  /* ── SPACING · Fibonacci/golden-ratio inspired ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 13px;
+  --sp-4: 21px;
+  --sp-5: 34px;
+  --sp-6: 55px;
+  --sp-7: 89px;
+  --sp-8: 144px;
+  --sp-9: 233px;
+
+  /* ── RADII ── */
+  --r-sm:   6px;
+  --r-md:  10px;
+  --r-lg:  16px;
+  --r-xl:  24px;
+  --r-full:9999px;
+
+  /* ── ELEVATION (soft, ink-tinted) ── */
+  --sh-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --sh-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --sh-lg: 0 12px 40px rgba(15, 23, 42, 0.12);
+  --sh-focus: 0 0 0 3px var(--sw-blue-100);
+
+  /* ── MOTION ── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --d-micro: 120ms;
+  --d-ui:    240ms;
+  --d-emph:  400ms;
+}
+
+/* ── Semantic type rules ── */
+html, body { font-family: var(--font-body); color: var(--fg-2); background: var(--bg); -webkit-font-smoothing: antialiased; }
+body { font-size: var(--t-body); line-height: 1.6; }
+
+h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; letter-spacing: -0.02em; line-height: 1.15; color: var(--fg-1); }
+h1 { font-size: var(--t-h1); font-weight: 700; }
+h2 { font-size: var(--t-h2); font-weight: 700; }
+h3 { font-size: var(--t-h3); font-weight: 600; }
+h4 { font-size: var(--t-h4); font-weight: 600; letter-spacing: -0.01em; }
+
+.display    { font-family: var(--font-display); font-size: var(--t-display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; color: var(--fg-1); }
+.display-xl { font-family: var(--font-display); font-size: var(--t-display-xl); font-weight: 800; letter-spacing: -0.02em; line-height: 1.0; color: var(--fg-1); }
+
+p           { margin: 0 0 var(--sp-3); color: var(--fg-2); text-wrap: pretty; }
+.lede       { font-size: var(--t-lede); line-height: 1.55; color: var(--fg-2); max-width: 640px; }
+.caption    { font-size: var(--t-caption); color: var(--fg-3); }
+.mono       { font-family: var(--font-mono); }
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--t-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+code, .code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--sw-ink-50);
+  color: var(--sw-ink-700);
+  padding: 1px 6px;
+  border-radius: 4px;
+}

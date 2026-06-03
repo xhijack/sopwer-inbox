@@ -1,0 +1,21 @@
+@import "./tokens.css";
+@import "./inbox.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base type defaults (ported from colors_and_type.css html/body rules) */
+html,
+body {
+  font-family: var(--font-body);
+  color: var(--fg-2);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  font-size: var(--t-body);
+  line-height: 1.6;
+}
+button {
+  font-family: inherit;
+}

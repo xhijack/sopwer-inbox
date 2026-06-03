@@ -1,0 +1,22 @@
+{
+  "update_id": 100002,
+  "message": {
+    "message_id": 4568,
+    "from": {
+      "id": 8891234,
+      "is_bot": false,
+      "first_name": "Budi",
+      "username": "budisan"
+    },
+    "chat": {
+      "id": 8891234,
+      "type": "private"
+    },
+    "date": 1717400100,
+    "caption": "Ini foto resi pengiriman",
+    "photo": [
+      {"file_id": "AgACsmall", "width": 90, "height": 90},
+      {"file_id": "AgAClarge", "width": 800, "height": 800}
+    ]
+  }
+}

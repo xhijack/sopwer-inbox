@@ -1,0 +1,100 @@
+/* ========================================================================
+   Sopwer Design System — Colors & Type tokens (ported from colors_and_type.css)
+   ======================================================================== */
+:root {
+  /* ── PRIMARY · BLUE ── */
+  --sw-blue-50: #eaf3fc;
+  --sw-blue-100: #c9dff5;
+  --sw-blue-200: #93bdec;
+  --sw-blue-300: #5c9be2;
+  --sw-blue-400: #3b86dc;
+  --sw-blue-500: #2e78d9;
+  --sw-blue-600: #1f5fb8;
+  --sw-blue-700: #154693;
+  --sw-blue-800: #0c3273;
+  --sw-blue-900: #061f4d;
+
+  /* ── SECONDARY · GREEN ── */
+  --sw-green-50: #f0faeb;
+  --sw-green-100: #d9f1cb;
+  --sw-green-200: #b6e29a;
+  --sw-green-300: #91ce6a;
+  --sw-green-400: #75be45;
+  --sw-green-500: #5cab30;
+  --sw-green-600: #468722;
+  --sw-green-700: #346719;
+  --sw-green-800: #244910;
+  --sw-green-900: #162e0a;
+
+  /* ── ACCENT · YELLOW ── */
+  --sw-yellow-50: #fff8e1;
+  --sw-yellow-100: #ffedb3;
+  --sw-yellow-200: #ffdc75;
+  --sw-yellow-300: #ffc93c;
+  --sw-yellow-400: #fbb217;
+  --sw-yellow-500: #e69408;
+  --sw-yellow-600: #bd7806;
+  --sw-yellow-700: #935c04;
+  --sw-yellow-800: #6b4203;
+  --sw-yellow-900: #432901;
+
+  /* ── INK / NEUTRAL ── */
+  --sw-ink-900: #0b1220;
+  --sw-ink-800: #0f172a;
+  --sw-ink-700: #1f2937;
+  --sw-ink-600: #374151;
+  --sw-ink-500: #475569;
+  --sw-ink-400: #64748b;
+  --sw-ink-300: #94a3b8;
+  --sw-ink-200: #cbd5e1;
+  --sw-ink-100: #e2e8f0;
+  --sw-ink-50: #f1f5f9;
+  --sw-paper: #f8fafc;
+  --sw-white: #ffffff;
+
+  /* ── SEMANTIC ── */
+  --sw-success: #16a34a;
+  --sw-warning: #f59e0b;
+  --sw-error: #dc2626;
+  --sw-info: #2e78d9;
+
+  /* ── SEMANTIC SHORTHAND ── */
+  --bg: var(--sw-paper);
+  --surface: var(--sw-white);
+  --surface-2: var(--sw-ink-50);
+  --fg-1: var(--sw-ink-900);
+  --fg-2: var(--sw-ink-700);
+  --fg-3: var(--sw-ink-500);
+  --fg-4: var(--sw-ink-400);
+  --line: var(--sw-ink-100);
+  --line-strong: var(--sw-ink-200);
+  --brand: var(--sw-blue-500);
+  --brand-hover: var(--sw-blue-600);
+
+  /* ── TYPOGRAPHY ── */
+  --font-display: "Manrope", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --t-body: 15px;
+
+  /* ── RADII ── */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-full: 9999px;
+
+  /* ── ELEVATION ── */
+  --sh-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --sh-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --sh-lg: 0 12px 40px rgba(15, 23, 42, 0.12);
+  --sh-focus: 0 0 0 3px var(--sw-blue-100);
+
+  /* ── MOTION ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --d-micro: 120ms;
+  --d-ui: 240ms;
+  --d-emph: 400ms;
+}
