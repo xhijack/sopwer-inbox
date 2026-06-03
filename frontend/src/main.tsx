@@ -22,8 +22,12 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       siteName={siteName}
       enableSocket
       swrConfig={{
-        revalidateOnFocus: false,
+        revalidateOnFocus: true,
         shouldRetryOnError: false,
+        // Polling fallback: keeps the inbox live even when socket.io can't reach
+        // the browser (e.g. behind Cloudflare/nginx in production). Socket.io,
+        // when available, still updates instantly.
+        refreshInterval: 5000,
       }}
     >
       <InboxApp />
