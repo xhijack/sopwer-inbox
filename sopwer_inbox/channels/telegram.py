@@ -7,12 +7,23 @@ from datetime import datetime
 import frappe
 import requests
 from frappe import _
-from frappe.utils import get_datetime
+from frappe.utils import now_datetime
 
 from sopwer_inbox.channels.base import BaseChannelAdapter
 
 API_BASE = "https://api.telegram.org"
 TIMEOUT = 20
+
+
+def _unix_to_site_tz(unix_ts):
+	"""Telegram `date` is Unix UTC seconds. Convert to the site's timezone
+	(naive) so inbound timestamps match outbound (now_datetime). Otherwise they
+	are off by the server's UTC offset (e.g. 7h on a UTC server vs WIB)."""
+	utc_naive = datetime.utcfromtimestamp(int(unix_ts))
+	try:
+		return frappe.utils.convert_utc_to_system_timezone(utc_naive).replace(tzinfo=None)
+	except Exception:
+		return now_datetime()
 
 
 class TelegramAdapter(BaseChannelAdapter):
@@ -37,11 +48,11 @@ class TelegramAdapter(BaseChannelAdapter):
 			"message_type": message_type,
 			"content": content,
 			"media_url": media_url,
-			"timestamp": get_datetime(),
+			"timestamp": now_datetime(),
 			"raw": message,
 		}
 		if message.get("date"):
-			normalized["timestamp"] = datetime.fromtimestamp(message["date"])
+			normalized["timestamp"] = _unix_to_site_tz(message["date"])
 		return [normalized]
 
 	@staticmethod

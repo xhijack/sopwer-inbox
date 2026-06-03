@@ -371,8 +371,8 @@ body {
 .composer-inner { border: 1px solid var(--line-strong); border-radius: 16px; background: #fff; transition: border-color var(--d-micro), box-shadow var(--d-micro); }
 .composer-inner.focus { border-color: var(--pri); box-shadow: var(--sh-focus); }
 .composer textarea {
-  width: 100%; border: 0; resize: none; outline: none; font-family: var(--font-body); font-size: 13.5px;
-  line-height: 1.5; color: var(--fg-1); padding: 12px 14px 4px; max-height: 160px; background: none; display: block;
+  width: 100%; border: 0; resize: none; outline: none; font-family: var(--font-body); font-size: 14.5px;
+  line-height: 1.55; color: var(--fg-1); padding: 14px 16px 6px; min-height: 64px; max-height: 220px; background: none; display: block;
 }
 .composer-bar { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px 8px; }
 .composer-bar .tool { width: 32px; height: 32px; border-radius: 9999px; border: 0; background: none; color: var(--fg-3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--d-micro); }

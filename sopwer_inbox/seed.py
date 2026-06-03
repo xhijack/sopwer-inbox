@@ -37,6 +37,18 @@ def _ensure(doctype, key_filters, values):
 	return doc
 
 
+def create_default_canned():
+	"""Create starter canned responses only — safe for production (no demo
+	channels/conversations). Run once after install if you want templates ready.
+
+	    bench --site <site> execute sopwer_inbox.seed.create_default_canned
+	"""
+	for c in CANNED:
+		_ensure("Inbox Canned Response", {"title": c["title"]}, c)
+	frappe.db.commit()
+	return {"canned": len(CANNED)}
+
+
 def create_demo_data():
 	channels = {}
 	for c in CHANNELS:

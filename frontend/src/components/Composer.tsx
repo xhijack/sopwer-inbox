@@ -50,7 +50,8 @@ export function Composer({
     const el = ta.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 160) + "px";
+    // Min 64px (roomy default), grow up to 220px.
+    el.style.height = Math.max(64, Math.min(el.scrollHeight, 220)) + "px";
   }, []);
 
   useEffect(() => {
