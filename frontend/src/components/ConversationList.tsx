@@ -55,12 +55,7 @@ export function ConvItem({
         </div>
         <div className="conv-meta">
           {channel && (
-            <span className={"conv-chlabel " + channel.type}>
-              <span className="g">
-                <ChannelGlyph ch={channel.type} size={9} />
-              </span>
-              {channel.name}
-            </span>
+            <span className={"conv-chlabel " + channel.type}>{channel.name}</span>
           )}
           {c.tags.map((tg) => (
             <span key={tg} className={"tag-chip " + tagClass(tg)}>
