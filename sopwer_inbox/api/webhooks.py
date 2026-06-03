@@ -53,7 +53,14 @@ def telegram(channel=None, debug=None):
 	use it to confirm whether requests actually reach this code.
 	"""
 	log = frappe.logger("sopwer_inbox", allow_site=True)
-	raw = frappe.request.get_data(as_text=True) if getattr(frappe, "request", None) else ""
+	req = getattr(frappe, "request", None)
+	# Telegram POSTs a JSON body; Frappe then builds form_dict from that body and
+	# DROPS the query string, so `channel`/`debug` arrive as None. Read them
+	# straight from the query string instead.
+	if req is not None:
+		channel = channel or req.args.get("channel")
+		debug = debug or req.args.get("debug")
+	raw = req.get_data(as_text=True) if req is not None else ""
 	log.info(
 		"telegram webhook HIT | channel=%r debug=%r secret_header=%r expect=%r body_len=%s body=%s",
 		channel,
