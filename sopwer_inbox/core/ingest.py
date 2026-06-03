@@ -77,6 +77,35 @@ def _preview(normalized):
 	return _MEDIA_PREVIEW.get(normalized.get("message_type"), "")
 
 
+def _download_media(media_url, conversation_name):
+	"""Download inbound media to a private File and return its file_url.
+
+	Best-effort: on failure the message is still stored (text/caption only)."""
+	import requests
+
+	try:
+		resp = requests.get(media_url, timeout=30)
+		resp.raise_for_status()
+		content = resp.content
+	except Exception:
+		frappe.log_error(title="Sopwer Inbox media download failed", message=frappe.get_traceback())
+		return None
+
+	fname = (media_url.split("/")[-1].split("?")[0]) or "media"
+	f = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": fname,
+			"content": content,
+			"is_private": 1,
+			"attached_to_doctype": "Inbox Conversation",
+			"attached_to_name": conversation_name,
+		}
+	)
+	f.insert(ignore_permissions=True)
+	return f.file_url
+
+
 def ingest_inbound(normalized, channel):
 	"""Ingest one normalized inbound message. Returns the Inbox Message doc,
 	or ``None`` when the message was a duplicate (idempotent webhooks)."""
@@ -85,6 +114,10 @@ def ingest_inbound(normalized, channel):
 
 	if _is_duplicate(conversation.name, normalized.get("external_message_id")):
 		return None
+
+	media_file = None
+	if normalized.get("media_url"):
+		media_file = _download_media(normalized["media_url"], conversation.name)
 
 	message = frappe.get_doc(
 		{
@@ -95,7 +128,7 @@ def ingest_inbound(normalized, channel):
 			"is_internal": 0,
 			"message_type": normalized.get("message_type") or "Text",
 			"content": normalized.get("content"),
-			"media_file": normalized.get("media_url"),
+			"media_file": media_file,
 			"external_message_id": normalized.get("external_message_id"),
 			"delivery_status": "Delivered",
 			"message_timestamp": normalized.get("timestamp") or now_datetime(),

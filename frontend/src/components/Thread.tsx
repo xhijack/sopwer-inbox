@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { Ic, ChannelGlyph } from "./icons";
 import { Bubble, NoteCard, ThreadSkeleton } from "./Bubbles";
-import { Composer, type ComposerMode } from "./Composer";
+import { Composer, type ComposerMode, type OutgoingMedia } from "./Composer";
 import { toApiStatus } from "@/lib/format";
 import type {
   AgentVM,
@@ -139,7 +139,7 @@ interface ThreadProps {
   onReconnect: () => void;
   onStatus: (s: ConvStatus) => void;
   onAssign: (a: string | null) => void;
-  onSend: (text: string, mode: ComposerMode) => void;
+  onSend: (text: string, mode: ComposerMode, media?: OutgoingMedia) => void;
   onRetry: (id: string) => void;
   cpCollapsed: boolean;
   onToggleCp: () => void;

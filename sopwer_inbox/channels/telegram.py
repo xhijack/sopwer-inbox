@@ -36,7 +36,8 @@ class TelegramAdapter(BaseChannelAdapter):
 
 		chat = message.get("chat", {})
 		sender = message.get("from", {})
-		message_type, content, media_url = self._classify(message)
+		message_type, content, file_id = self._classify(message)
+		media_url = self._file_download_url(file_id) if file_id else None
 
 		normalized = {
 			"channel_type": "Telegram",
@@ -62,23 +63,45 @@ class TelegramAdapter(BaseChannelAdapter):
 
 	@staticmethod
 	def _classify(message):
-		"""Return (message_type, content, media_url). media_url is deferred to a
-		File download step (Phase 8); we keep the caption/text here."""
+		"""Return (message_type, content, file_id). file_id (Telegram) is resolved
+		to a download URL by the caller; None for text/location."""
 		if message.get("text"):
 			return "Text", message["text"], None
 		caption = message.get("caption")
 		if message.get("photo"):
-			return "Image", caption, None
-		if message.get("voice") or message.get("audio"):
-			return "Audio", caption, None
+			photos = message["photo"] or []
+			return "Image", caption, (photos[-1].get("file_id") if photos else None)
+		if message.get("voice"):
+			return "Audio", caption, message["voice"].get("file_id")
+		if message.get("audio"):
+			return "Audio", caption, message["audio"].get("file_id")
 		if message.get("video"):
-			return "Video", caption, None
+			return "Video", caption, message["video"].get("file_id")
 		if message.get("location"):
 			loc = message["location"]
 			return "Location", f"{loc.get('latitude')},{loc.get('longitude')}", None
 		if message.get("document"):
-			return "File", caption, None
+			return "File", caption, message["document"].get("file_id")
 		return "Text", caption, None
+
+	def _file_download_url(self, file_id):
+		"""Resolve a Telegram file_id to a downloadable URL via getFile."""
+		token = self.channel.get_password("telegram_bot_token")
+		try:
+			resp = requests.get(f"{API_BASE}/bot{token}/getFile", params={"file_id": file_id}, timeout=TIMEOUT)
+			data = resp.json()
+			if data.get("ok"):
+				return f"{API_BASE}/file/bot{token}/{data['result']['file_path']}"
+		except Exception:
+			frappe.log_error(title="Telegram getFile failed", message=frappe.get_traceback())
+		return None
+
+	def _resolve_local_file(self, media_path):
+		"""Map a Frappe file URL (/files/.. or /private/files/..) to an absolute path."""
+		name = frappe.db.get_value("File", {"file_url": media_path}, "name")
+		if name:
+			return frappe.get_doc("File", name).get_full_path()
+		frappe.throw(_("Cannot resolve media file: {0}").format(media_path))
 
 	# -- outbound ----------------------------------------------------------
 	def send_message(self, conversation_doc, *, text=None, media_path=None) -> dict:
@@ -86,12 +109,26 @@ class TelegramAdapter(BaseChannelAdapter):
 		if not token:
 			frappe.throw(_("Telegram bot token is not configured for channel {0}").format(self.channel.name))
 
-		url = f"{API_BASE}/bot{token}/sendMessage"
-		resp = requests.post(
-			url,
-			json={"chat_id": conversation_doc.external_conversation_id, "text": text or ""},
-			timeout=TIMEOUT,
-		)
+		chat_id = conversation_doc.external_conversation_id
+
+		if media_path:
+			local = self._resolve_local_file(media_path)
+			is_image = str(media_path).lower().rsplit(".", 1)[-1] in ("jpg", "jpeg", "png", "gif", "webp")
+			method, field = ("sendPhoto", "photo") if is_image else ("sendDocument", "document")
+			data = {"chat_id": chat_id}
+			if text:
+				data["caption"] = text
+			with open(local, "rb") as fh:
+				resp = requests.post(
+					f"{API_BASE}/bot{token}/{method}", data=data, files={field: fh}, timeout=60
+				)
+		else:
+			resp = requests.post(
+				f"{API_BASE}/bot{token}/sendMessage",
+				json={"chat_id": chat_id, "text": text or ""},
+				timeout=TIMEOUT,
+			)
+
 		data = resp.json()
 		if not data.get("ok"):
 			frappe.throw(_("Telegram send failed: {0}").format(data.get("description", "unknown error")))

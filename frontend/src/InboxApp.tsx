@@ -11,7 +11,7 @@ import {
   type AIConfig,
   type ToastItem,
 } from "./components/Modals";
-import type { ComposerMode } from "./components/Composer";
+import type { ComposerMode, OutgoingMedia } from "./components/Composer";
 import { useSession } from "./hooks/useSession";
 import {
   useChannels,
@@ -163,10 +163,50 @@ export function InboxApp() {
   }
 
   /* ── optimistic send ── */
-  async function sendMsg(text: string, mode: ComposerMode) {
+  async function sendMsg(text: string, mode: ComposerMode, media?: OutgoingMedia) {
     if (!selId) return;
     const tmpId = "tmp" + Date.now();
     const time = hhmm(new Date().toISOString());
+
+    if (media) {
+      const uiType: MessageVM["type"] =
+        media.type === "Image"
+          ? "image"
+          : media.type === "Video"
+            ? "video"
+            : media.type === "Audio"
+              ? "audio"
+              : "file";
+      const bubble: MessageVM = {
+        id: tmpId,
+        dir: "out",
+        type: uiType,
+        time,
+        status: "pending",
+        agent: session.userId,
+        optimistic: true,
+        caption: text || undefined,
+        media: { url: media.url, name: media.name, label: text || media.name },
+      };
+      setOptimistic((o) => ({ ...o, [selId]: [...(o[selId] || []), bubble] }));
+      try {
+        await api.sendMessage({
+          conversation: selId,
+          text,
+          message_type: media.type,
+          media_path: media.url,
+        });
+        await mutateMessages();
+        await mutateConvs();
+        setOptimistic((o) => ({ ...o, [selId]: (o[selId] || []).filter((m) => m.id !== tmpId) }));
+      } catch {
+        setOptimistic((o) => ({
+          ...o,
+          [selId]: (o[selId] || []).map((m) => (m.id === tmpId ? { ...m, status: "failed" } : m)),
+        }));
+      }
+      return;
+    }
 
     if (mode === "note") {
       const note: MessageVM = { id: tmpId, dir: "out", type: "note", text, time, agent: session.userId, optimistic: true };

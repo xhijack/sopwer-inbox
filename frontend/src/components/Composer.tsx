@@ -1,12 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useFrappeFileUpload } from "frappe-react-sdk";
 import { Ic } from "./icons";
-import type { InboxCannedResponse } from "@/types";
+import type { InboxCannedResponse, MessageType } from "@/types";
 import type { Role } from "@/hooks/useSession";
 
 export type ComposerMode = "reply" | "note";
+export interface OutgoingMedia {
+  url: string;
+  type: MessageType;
+  name?: string;
+}
 
 interface ComposerProps {
-  onSend: (text: string, mode: ComposerMode) => void;
+  onSend: (text: string, mode: ComposerMode, media?: OutgoingMedia) => void;
   channelName: string;
   role: Role;
   canned: InboxCannedResponse[];
@@ -35,7 +41,29 @@ export function Composer({
   const [aiBusy, setAiBusy] = useState(false);
   const [aiErr, setAiErr] = useState(false);
   const [aiDraft, setAiDraft] = useState(false);
+  const [uploadErr, setUploadErr] = useState(false);
   const ta = useRef<HTMLTextAreaElement>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const { upload, loading: uploading } = useFrappeFileUpload();
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>, kind: MessageType) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadErr(false);
+    try {
+      const res = await upload(file, { isPrivate: true });
+      const url = (res as { file_url?: string })?.file_url;
+      if (!url) throw new Error("upload returned no file_url");
+      // Media always goes to the customer (reply); typed text becomes the caption.
+      onSend(val.trim(), "reply", { url, type: kind, name: file.name });
+      setVal("");
+      setShowCanned(false);
+    } catch {
+      setUploadErr(true);
+    }
+  }
 
   const q = val.startsWith("/") ? val.slice(1).toLowerCase() : "";
   const filtered = showCanned
@@ -210,6 +238,15 @@ export function Composer({
           </button>
         </div>
       )}
+      {uploadErr && (
+        <div className="ai-fail">
+          <Ic.AlertCircle size={14} />
+          <span>Gagal mengunggah lampiran. Coba lagi.</span>
+          <button className="rt" onClick={() => setUploadErr(false)}>
+            Tutup
+          </button>
+        </div>
+      )}
 
       <div className={"composer-inner" + (focus ? " focus" : "")}>
         <textarea
@@ -227,10 +264,39 @@ export function Composer({
           onBlur={() => setFocus(false)}
         />
         <div className="composer-bar">
-          <button className="tool" title="Lampirkan gambar">
-            <Ic.Image size={18} />
+          <input
+            ref={imageInput}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => onPickFile(e, "Image")}
+          />
+          <input
+            ref={fileInput}
+            type="file"
+            style={{ display: "none" }}
+            onChange={(e) => onPickFile(e, "File")}
+          />
+          <button
+            className="tool"
+            title="Lampirkan gambar"
+            disabled={uploading}
+            onClick={() => imageInput.current?.click()}
+          >
+            {uploading ? (
+              <span className="spin">
+                <Ic.Loader size={18} />
+              </span>
+            ) : (
+              <Ic.Image size={18} />
+            )}
           </button>
-          <button className="tool" title="Lampirkan file">
+          <button
+            className="tool"
+            title="Lampirkan file"
+            disabled={uploading}
+            onClick={() => fileInput.current?.click()}
+          >
             <Ic.Paperclip size={18} />
           </button>
           <button className="tool" title="Emoji">
