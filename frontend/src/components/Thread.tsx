@@ -234,7 +234,6 @@ export function Thread(props: ThreadProps) {
                 {ch.name}
               </span>
             )}
-            <span>{conv.contact.handle}</span>
           </div>
         </div>
         <div className="th-actions">
