@@ -21,6 +21,7 @@ function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockP
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<CustomerOption[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
 
@@ -63,10 +64,14 @@ function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockP
   async function doSearch(q: string) {
     setSearchQ(q);
     if (!q.trim()) { setSearchResults([]); return; }
+    setSearchError(null);
     setSearching(true);
     try {
       const res = await callSearch({ q }) as { message: CustomerOption[] } | undefined;
       setSearchResults(res?.message ?? []);
+    } catch (e: unknown) {
+      setSearchError(e instanceof Error ? e.message : "Gagal mencari customer.");
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
@@ -115,6 +120,7 @@ function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockP
           onChange={(e) => doSearch(e.target.value)}
         />
         {searching && <span className="clc-searching">Mencari…</span>}
+        {searchError && <div className="clc-error">{searchError}</div>}
         {!searching && searchResults.length > 0 && (
           <div className="clc-results">
             {searchResults.map((r) => (
