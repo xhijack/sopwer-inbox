@@ -73,3 +73,45 @@ class TestIngest(InboxTestCase):
 		)
 		conv = frappe.get_doc("Inbox Conversation", msg.conversation)
 		self.assertTrue(conv.last_message_preview)
+
+	def test_ingest_with_media_bytes_saves_file(self):
+		"""When normalized carries media_bytes, ingest saves a private File and
+		sets media_file on the message — no network call needed."""
+		raw_bytes = b"\x89PNG\r\n\x1a\n"
+		msg = ingest_inbound(
+			normalized(
+				external_message_id="wa-img-1",
+				message_type="Image",
+				content="foto",
+				media_bytes=raw_bytes,
+				media_filename="receipt.png",
+				media_mimetype="image/png",
+			),
+			self.channel.name,
+		)
+		self.assertIsNotNone(msg)
+		self.assertIsNotNone(msg.media_file)
+		# The saved File must exist and have the right name.
+		file_doc = frappe.get_doc("File", {"file_url": msg.media_file})
+		self.assertEqual(file_doc.file_name, "receipt.png")
+		self.assertEqual(file_doc.is_private, 1)
+
+	def test_ingest_media_bytes_takes_priority_over_media_url(self):
+		"""media_bytes path must be used even when media_url is also set.
+		Uses a .ogg (audio) extension so Frappe does not run JPEG EXIF stripping."""
+		raw_bytes = b"OggS\x00\x02\x00\x00"
+		msg = ingest_inbound(
+			normalized(
+				external_message_id="wa-audio-2",
+				message_type="Audio",
+				content=None,
+				media_bytes=raw_bytes,
+				media_filename="voice.ogg",
+				media_url="https://example.com/should-not-be-fetched.ogg",
+			),
+			self.channel.name,
+		)
+		self.assertIsNotNone(msg.media_file)
+		# Confirm we did NOT hit the URL (would fail with a real request on test env).
+		file_doc = frappe.get_doc("File", {"file_url": msg.media_file})
+		self.assertEqual(file_doc.file_name, "voice.ogg")

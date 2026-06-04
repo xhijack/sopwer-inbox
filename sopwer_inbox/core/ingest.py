@@ -77,9 +77,35 @@ def _preview(normalized):
 	return _MEDIA_PREVIEW.get(normalized.get("message_type"), "")
 
 
-def _download_media(media_url, conversation_name):
-	"""Download inbound media to a private File and return its file_url.
+def _save_media_bytes(content: bytes, filename: str, conversation_name: str):
+	"""Save raw media bytes to a private File attached to the conversation.
 
+	Returns the file_url, or None on failure.
+	"""
+	if not filename:
+		filename = "wa-media"
+	try:
+		f = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": filename,
+				"content": content,
+				"is_private": 1,
+				"attached_to_doctype": "Inbox Conversation",
+				"attached_to_name": conversation_name,
+			}
+		)
+		f.insert(ignore_permissions=True)
+		return f.file_url
+	except Exception:
+		frappe.log_error(title="Sopwer Inbox save media bytes failed", message=frappe.get_traceback())
+		return None
+
+
+def _download_media(media_url, conversation_name):
+	"""Download inbound media via GET to a private File and return its file_url.
+
+	Used for channels that expose a directly GET-able URL (e.g. Telegram).
 	Best-effort: on failure the message is still stored (text/caption only)."""
 	import requests
 
@@ -92,18 +118,7 @@ def _download_media(media_url, conversation_name):
 		return None
 
 	fname = (media_url.split("/")[-1].split("?")[0]) or "media"
-	f = frappe.get_doc(
-		{
-			"doctype": "File",
-			"file_name": fname,
-			"content": content,
-			"is_private": 1,
-			"attached_to_doctype": "Inbox Conversation",
-			"attached_to_name": conversation_name,
-		}
-	)
-	f.insert(ignore_permissions=True)
-	return f.file_url
+	return _save_media_bytes(content, fname, conversation_name)
 
 
 def ingest_inbound(normalized, channel):
@@ -116,7 +131,13 @@ def ingest_inbound(normalized, channel):
 		return None
 
 	media_file = None
-	if normalized.get("media_url"):
+	if normalized.get("media_bytes"):
+		media_file = _save_media_bytes(
+			normalized["media_bytes"],
+			normalized.get("media_filename") or "wa-media",
+			conversation.name,
+		)
+	elif normalized.get("media_url"):
 		media_file = _download_media(normalized["media_url"], conversation.name)
 
 	message = frappe.get_doc(

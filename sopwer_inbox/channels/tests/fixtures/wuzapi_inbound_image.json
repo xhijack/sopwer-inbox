@@ -1,0 +1,22 @@
+{
+  "type": "Message",
+  "event": {
+    "Info": {
+      "ID": "3EB0IMG001",
+      "Chat": "628555111222@s.whatsapp.net",
+      "Sender": "628555111222@s.whatsapp.net",
+      "PushName": "Ani Rahayu",
+      "Timestamp": "2026-06-04 10:30:00"
+    },
+    "Message": {
+      "imageMessage": {
+        "url": "https://mmg.whatsapp.net/v/t62.7118-24/encrypted-image.enc",
+        "mediaKey": "AAABBBBCCCCDDDDEEEEFFFFGGGGHHHH==",
+        "mimetype": "image/jpeg",
+        "fileSha256": "base64-sha256-hash==",
+        "fileLength": 45678,
+        "caption": "Ini foto pesanan saya"
+      }
+    }
+  }
+}

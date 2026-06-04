@@ -28,9 +28,15 @@ class BaseChannelAdapter:
 		      "sender_phone": str | None,
 		      "message_type": "Text"|"Image"|"File"|"Audio"|"Video"|"Location",
 		      "content": str | None,
-		      "media_url": str | None,
+		      "media_url": str | None,       # GET-able URL (Telegram); None for WA
 		      "timestamp": datetime,
 		      "raw": dict,
+
+		      # Optional — set by WhatsApp adapter when media bytes were downloaded
+		      # via Wuzapi (encrypted media has no plain GET URL).
+		      "media_bytes":    bytes | None,   # decoded media content
+		      "media_filename": str | None,     # suggested file name
+		      "media_mimetype": str | None,     # MIME type from the webhook
 		    }
 		"""
 		raise NotImplementedError
