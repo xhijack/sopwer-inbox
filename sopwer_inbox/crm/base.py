@@ -23,3 +23,27 @@ class BaseCRMProvider:
 
 	def link_conversation(self, conversation):  # Phase D
 		raise NotImplementedError
+
+	# ------------------------------------------------------------------
+	# Customer linking contract (Phase: link/create customer from inbox)
+	# ------------------------------------------------------------------
+
+	def linked_customer(self, contact: str) -> "str | None":
+		"""Return the Customer linked to *contact*, or None."""
+		return None
+
+	def search_customers(self, q: str, limit: int = 10) -> list:
+		"""Return a list of ``{"name": ..., "label": ...}`` dicts matching *q*."""
+		return []
+
+	def suggest_customers_for_contact(self, contact: str) -> list:
+		"""Return Customer suggestions based on shared phone numbers."""
+		return []
+
+	def link_customer(self, contact: str, customer: str) -> None:
+		"""Link *customer* to *contact*."""
+		raise NotImplementedError
+
+	def create_and_link_customer(self, contact: str, customer_name: str) -> str:
+		"""Create a Customer named *customer_name*, link it to *contact*, return its name."""
+		raise NotImplementedError

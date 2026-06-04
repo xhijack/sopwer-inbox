@@ -28,7 +28,9 @@ def _conversation_customer(conversation: str):
 	if not contact:
 		return None
 	provider = get_provider()
-	return provider._linked_customer(contact) if hasattr(provider, "_linked_customer") else None
+	if not provider:
+		return None
+	return provider.linked_customer(contact)
 
 
 @frappe.whitelist()
