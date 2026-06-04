@@ -183,6 +183,8 @@ export function Thread(props: ThreadProps) {
   } = props;
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [docSending, setDocSending] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
 
   const { data: sendCfg } = useFrappeGetCall<{ message: { enabled: boolean; doctypes: string[] } }>(
     "sopwer_inbox.api.document.get_send_config",
@@ -192,12 +194,18 @@ export function Thread(props: ThreadProps) {
 
   async function handleDocSend(doctype: string, name: string) {
     if (!conv) return;
+    setDocError(null);
+    setDocSending(true);
     try {
       await api.sendDocument(conv.id, doctype, name);
       playOutgoing();
       await mutateMessages();
-    } finally {
       setPickerOpen(false);
+    } catch (e: unknown) {
+      // Surface the real backend error instead of silently closing the picker.
+      setDocError(e instanceof Error ? e.message : "Gagal mengirim dokumen.");
+    } finally {
+      setDocSending(false);
     }
   }
 
@@ -345,8 +353,10 @@ export function Thread(props: ThreadProps) {
         <DocumentPicker
           conversation={conv.id}
           doctypes={docDoctypes}
-          onClose={() => setPickerOpen(false)}
+          onClose={() => { setPickerOpen(false); setDocError(null); }}
           onSend={handleDocSend}
+          sending={docSending}
+          error={docError}
         />
       )}
     </section>

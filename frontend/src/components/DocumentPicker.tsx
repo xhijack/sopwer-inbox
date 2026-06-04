@@ -11,12 +11,14 @@ export function DocumentPicker({
   onClose,
   onSend,
   sending,
+  error,
 }: {
   conversation: string;
   doctypes: string[];
   onClose: () => void;
   onSend: (doctype: string, name: string) => void;
   sending?: boolean;
+  error?: string | null;
 }) {
   const [doctype, setDoctype] = useState(doctypes[0] || "");
   const [q, setQ] = useState("");
@@ -62,6 +64,19 @@ export function DocumentPicker({
             />
           </div>
         </div>
+
+        {error && (
+          <div className="doc-error">
+            <Ic.AlertTriangle size={14} />
+            <span>{error}</span>
+          </div>
+        )}
+        {sending && (
+          <div className="doc-sending">
+            <span className="spin" style={{ display: "inline-flex" }}><Ic.Loader size={14} /></span>
+            <span>Mengirim dokumen…</span>
+          </div>
+        )}
 
         <div className="doc-list">
           {isLoading && <div className="doc-empty">Memuat…</div>}
