@@ -38,6 +38,18 @@ class TestWhatsAppAdapter(InboxTestCase):
 	def test_parse_non_message_returns_empty(self):
 		self.assertEqual(self.adapter.parse_inbound({"type": "ReadReceipt", "event": {}}), [])
 
+	def test_resolve_local_file_returns_existing_path(self):
+		"""file_url must be resolved to a real on-disk path for the whatsapp handler."""
+		f = frappe.get_doc(
+			{"doctype": "File", "file_name": "wa-test.png", "content": "hello"}
+		).insert(ignore_permissions=True)
+		path = self.adapter._resolve_local_file(f.file_url)
+		self.assertTrue(os.path.exists(path))
+
+	def test_resolve_local_file_throws_when_missing(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.adapter._resolve_local_file("/files/does-not-exist-zzz.png")
+
 	def test_send_requires_delegate_app(self):
 		"""On a site without the 'whatsapp' app, sending must fail loudly — never
 		silently no-op (CLAUDE.md §5)."""

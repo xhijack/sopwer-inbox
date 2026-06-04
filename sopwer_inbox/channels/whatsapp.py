@@ -44,6 +44,14 @@ def _strip_jid(jid: str) -> str:
 
 
 class WhatsAppAdapter(BaseChannelAdapter):
+	def _resolve_local_file(self, media_path):
+		"""Turn a Frappe file_url (/files/.. or /private/files/..) into a real local
+		filesystem path — the whatsapp handler reads the file from disk."""
+		name = frappe.db.get_value("File", {"file_url": media_path}, "name")
+		if name:
+			return frappe.get_doc("File", name).get_full_path()
+		frappe.throw(_("Cannot resolve media file: {0}").format(media_path))
+
 	def _account(self):
 		account_id = self.channel.get("wuzapi_instance")
 		if not account_id:
@@ -117,7 +125,8 @@ class WhatsAppAdapter(BaseChannelAdapter):
 		recipient = conversation_doc.external_conversation_id
 
 		if media_path:
-			handler.send_file(account.whatsapp_number, media_path, recipient, caption=text)
+			local = self._resolve_local_file(media_path)
+			handler.send_file(account.whatsapp_number, local, recipient, caption=text)
 		else:
 			handler.send_message(account.whatsapp_number, text or "", recipient)
 
