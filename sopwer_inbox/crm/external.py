@@ -1,3 +1,5 @@
+# Copyright (c) 2026, PT Sopwer Teknologi Indonesia and contributors
+# For license information, please see license.txt
 from sopwer_inbox.crm.base import BaseCRMProvider
 
 
