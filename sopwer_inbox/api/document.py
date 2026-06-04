@@ -39,3 +39,40 @@ def list_sendable_documents(conversation, doctype, q=""):
 		frappe.throw(_("Document type {0} is not enabled.").format(doctype))
 	customer = _conversation_customer(conversation)
 	return provider.list_documents(doctype, customer, q)
+
+
+def _document_customer(doctype, name):
+	return frappe.db.get_value(doctype, name, "customer")
+
+
+@frappe.whitelist()
+def send_document(conversation, doctype, name):
+	provider = _require_provider()
+	_require_send_permission()
+	if doctype not in provider.allowed_send_doctypes():
+		frappe.throw(_("Document type {0} is not enabled.").format(doctype))
+
+	conv_customer = _conversation_customer(conversation)
+	doc_customer = _document_customer(doctype, name)
+	if conv_customer and doc_customer and conv_customer != doc_customer:
+		frappe.throw(_("This document belongs to a different customer."))
+
+	pdf = provider.get_document_pdf(doctype, name)
+	file_doc = frappe.get_doc({
+		"doctype": "File",
+		"file_name": f"{name}.pdf",
+		"content": pdf,
+		"is_private": 1,
+		"attached_to_doctype": "Inbox Conversation",
+		"attached_to_name": conversation,
+	})
+	file_doc.insert(ignore_permissions=True)
+
+	from sopwer_inbox.api.conversation import send_message
+
+	return send_message(
+		conversation,
+		text=f"{doctype} {name}",
+		message_type="File",
+		media_path=file_doc.file_url,
+	)
