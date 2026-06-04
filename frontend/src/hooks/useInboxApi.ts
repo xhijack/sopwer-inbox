@@ -2,6 +2,7 @@ import { useFrappePostCall } from "frappe-react-sdk";
 import type { ConvStatus, MessageType } from "@/types";
 
 const M = "sopwer_inbox.api.conversation";
+const D = "sopwer_inbox.api.document";
 
 /** Typed wrappers over the whitelisted conversation methods. */
 export function useInboxApi() {
@@ -11,6 +12,7 @@ export function useInboxApi() {
   const { call: assignCall } = useFrappePostCall(`${M}.assign`);
   const { call: readCall } = useFrappePostCall(`${M}.mark_read`);
   const { call: retryCall } = useFrappePostCall(`${M}.retry_message`);
+  const { call: sendDocCall } = useFrappePostCall(`${D}.send_document`);
 
   return {
     sendMessage: (args: {
@@ -35,5 +37,7 @@ export function useInboxApi() {
       assignCall({ conversation, user }),
     markRead: (conversation: string) => readCall({ conversation }),
     retryMessage: (message: string) => retryCall({ message }),
+    sendDocument: (conversation: string, doctype: string, name: string) =>
+      sendDocCall({ conversation, doctype, name }),
   };
 }

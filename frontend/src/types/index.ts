@@ -165,3 +165,12 @@ export interface ConversationVM {
   tags: string[];
   preview: string;
 }
+
+export interface SendableDocument {
+  name: string;
+  date?: string;
+  grand_total?: number;
+  status?: string;
+  currency?: string;
+  doctype?: string;
+}
