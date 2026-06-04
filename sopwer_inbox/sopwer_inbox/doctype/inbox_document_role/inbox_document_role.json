@@ -1,0 +1,8 @@
+{
+ "actions": [], "creation": "2026-06-04 00:00:00", "doctype": "DocType",
+ "engine": "InnoDB", "istable": 1, "module": "Sopwer Inbox",
+ "name": "Inbox Document Role", "naming_rule": "Random",
+ "field_order": ["role"],
+ "fields": [{"fieldname": "role", "fieldtype": "Link", "options": "Role", "label": "Role", "in_list_view": 1, "reqd": 1}],
+ "permissions": []
+}

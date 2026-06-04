@@ -1,0 +1,8 @@
+{
+ "actions": [], "creation": "2026-06-04 00:00:00", "doctype": "DocType",
+ "engine": "InnoDB", "istable": 1, "module": "Sopwer Inbox",
+ "name": "Inbox Sendable Document Type", "naming_rule": "Random",
+ "field_order": ["document_type"],
+ "fields": [{"fieldname": "document_type", "fieldtype": "Link", "options": "DocType", "label": "Document Type", "in_list_view": 1, "reqd": 1}],
+ "permissions": []
+}
