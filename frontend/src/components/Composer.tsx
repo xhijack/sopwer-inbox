@@ -52,16 +52,21 @@ export function Composer({
   const { upload, loading: uploading } = useFrappeFileUpload();
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>, kind: MessageType) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
-    if (!file) return;
+    if (!files.length) return;
     setUploadErr(false);
+    // Media always goes to the customer (reply). The typed text becomes the
+    // caption of the FIRST attachment; the rest are sent as their own messages.
+    const caption = val.trim();
     try {
-      const res = await upload(file, { isPrivate: true });
-      const url = (res as { file_url?: string })?.file_url;
-      if (!url) throw new Error("upload returned no file_url");
-      // Media always goes to the customer (reply); typed text becomes the caption.
-      onSend(val.trim(), "reply", { url, type: kind, name: file.name });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const res = await upload(file, { isPrivate: true });
+        const url = (res as { file_url?: string })?.file_url;
+        if (!url) throw new Error("upload returned no file_url");
+        onSend(i === 0 ? caption : "", "reply", { url, type: kind, name: file.name });
+      }
       setVal("");
       setShowCanned(false);
     } catch {
@@ -272,18 +277,20 @@ export function Composer({
             ref={imageInput}
             type="file"
             accept="image/*"
+            multiple
             style={{ display: "none" }}
             onChange={(e) => onPickFile(e, "Image")}
           />
           <input
             ref={fileInput}
             type="file"
+            multiple
             style={{ display: "none" }}
             onChange={(e) => onPickFile(e, "File")}
           />
           <button
             className="tool"
-            title="Lampirkan gambar"
+            title="Lampirkan gambar (bisa pilih beberapa)"
             disabled={uploading}
             onClick={() => imageInput.current?.click()}
           >
@@ -297,7 +304,7 @@ export function Composer({
           </button>
           <button
             className="tool"
-            title="Lampirkan file"
+            title="Lampirkan file (bisa pilih beberapa)"
             disabled={uploading}
             onClick={() => fileInput.current?.click()}
           >
