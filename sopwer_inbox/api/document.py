@@ -54,8 +54,15 @@ def send_document(conversation, doctype, name):
 
 	conv_customer = _conversation_customer(conversation)
 	doc_customer = _document_customer(doctype, name)
-	if conv_customer and doc_customer and conv_customer != doc_customer:
-		frappe.throw(_("This document belongs to a different customer."))
+	# Safe-by-default: only allow when the conversation has a linked customer that
+	# matches the document's customer. Block (don't silently allow) when the
+	# conversation customer can't be resolved — prevents sending another
+	# customer's financial document to an unlinked conversation.
+	if not conv_customer or conv_customer != doc_customer:
+		frappe.throw(
+			_("This document does not match the conversation's customer. "
+			  "Link the contact to the correct customer first.")
+		)
 
 	pdf = provider.get_document_pdf(doctype, name)
 	file_doc = frappe.get_doc({

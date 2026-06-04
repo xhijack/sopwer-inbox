@@ -43,9 +43,21 @@ class TestDocumentApi(InboxTestCase):
 		})()
 		with patch.object(doc_api, "get_provider", return_value=fake), patch.object(
 			doc_api, "_conversation_customer", return_value="CUST-1"
-		), patch("frappe.db.get_value", return_value="CUST-OTHER"):
+		), patch.object(doc_api, "_document_customer", return_value="CUST-OTHER"):
 			with self.assertRaises(frappe.ValidationError):
 				doc_api.send_document(self.conv.name, "Sales Invoice", "INV-OTHER")
+
+	def test_send_blocked_when_no_conversation_customer(self):
+		"""Block send when the conversation has no linked ERP customer (safe-by-default)."""
+		fake = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"get_document_pdf": lambda self, dt, name, print_format=None: b"%PDF",
+		})()
+		with patch.object(doc_api, "get_provider", return_value=fake), patch.object(
+			doc_api, "_conversation_customer", return_value=None
+		), patch.object(doc_api, "_document_customer", return_value="CUST-1"):
+			with self.assertRaises(frappe.ValidationError):
+				doc_api.send_document(self.conv.name, "Sales Invoice", "INV-1")
 
 	def test_send_dispatches_document_message(self):
 		fake_provider = type("P", (), {
