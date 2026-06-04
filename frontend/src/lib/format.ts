@@ -53,8 +53,11 @@ export function toApiStatus(s: UIStatus): ConvStatus {
   }
 }
 
-export function channelTypeToUI(t: ChannelType | undefined): "wa" | "tg" {
-  return t === "WhatsApp" ? "wa" : "tg";
+export function channelTypeToUI(t: ChannelType | undefined): "wa" | "tg" | "ig" | "fb" {
+  if (t === "WhatsApp") return "wa";
+  if (t === "Instagram") return "ig";
+  if (t === "Facebook Messenger") return "fb";
+  return "tg";
 }
 
 export function deliveryToUI(

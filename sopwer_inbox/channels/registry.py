@@ -10,10 +10,13 @@ def _adapter_map():
 	# Imported lazily to avoid import cycles and to keep optional deps soft.
 	from sopwer_inbox.channels.telegram import TelegramAdapter
 	from sopwer_inbox.channels.whatsapp import WhatsAppAdapter
+	from sopwer_inbox.channels.meta import MessengerAdapter, InstagramAdapter
 
 	return {
 		"Telegram": TelegramAdapter,
 		"WhatsApp": WhatsAppAdapter,
+		"Facebook Messenger": MessengerAdapter,
+		"Instagram": InstagramAdapter,
 	}
 
 

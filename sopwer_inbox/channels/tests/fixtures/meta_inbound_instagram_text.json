@@ -1,0 +1,20 @@
+{
+  "object": "instagram",
+  "entry": [
+    {
+      "id": "999888777",
+      "time": 1749081800000,
+      "messaging": [
+        {
+          "sender": { "id": "6661234567" },
+          "recipient": { "id": "999888777" },
+          "timestamp": 1749081800000,
+          "message": {
+            "mid": "m_abcinstagram",
+            "text": "Halo min, tolong cek DM saya ya"
+          }
+        }
+      ]
+    }
+  ]
+}

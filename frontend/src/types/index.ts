@@ -2,7 +2,7 @@
 
 export type ConvStatus = "Open" | "Pending" | "Resolved";
 export type UIStatus = "open" | "pending" | "resolved";
-export type ChannelType = "Telegram" | "WhatsApp";
+export type ChannelType = "Telegram" | "WhatsApp" | "Facebook Messenger" | "Instagram";
 export type Direction = "Incoming" | "Outgoing";
 export type MessageType = "Text" | "Image" | "File" | "Audio" | "Video" | "Location";
 export type DeliveryStatus = "Pending" | "Sent" | "Delivered" | "Read" | "Failed";
@@ -148,7 +148,7 @@ export interface MessageVM {
 
 export interface ChannelVM {
   id: string;
-  type: "wa" | "tg";
+  type: "wa" | "tg" | "ig" | "fb";
   name: string;
   addr: string;
 }

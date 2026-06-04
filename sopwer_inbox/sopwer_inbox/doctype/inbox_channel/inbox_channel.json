@@ -17,6 +17,12 @@
   "wuzapi_base_url",
   "wuzapi_token",
   "wuzapi_instance",
+  "meta_section",
+  "meta_page_id",
+  "meta_page_access_token",
+  "meta_app_secret",
+  "meta_verify_token",
+  "meta_api_version",
   "routing_section",
   "webhook_secret",
   "company"
@@ -36,7 +42,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Channel Type",
-   "options": "Telegram\nWhatsApp",
+   "options": "Telegram\nWhatsApp\nFacebook Messenger\nInstagram",
    "reqd": 1
   },
   {
@@ -89,6 +95,43 @@
    "label": "Wuzapi Instance"
   },
   {
+   "fieldname": "meta_section",
+   "fieldtype": "Section Break",
+   "label": "Meta",
+   "depends_on": "eval:doc.channel_type==\"Facebook Messenger\"||doc.channel_type==\"Instagram\""
+  },
+  {
+   "description": "Page ID (Messenger) or IG user id (Instagram). Used to route inbound deliveries.",
+   "fieldname": "meta_page_id",
+   "fieldtype": "Data",
+   "label": "Page ID / IG User ID"
+  },
+  {
+   "description": "Long-lived Page Access Token. Encrypted at rest.",
+   "fieldname": "meta_page_access_token",
+   "fieldtype": "Password",
+   "label": "Page Access Token"
+  },
+  {
+   "description": "App Secret for X-Hub-Signature-256 verification. Encrypted at rest.",
+   "fieldname": "meta_app_secret",
+   "fieldtype": "Password",
+   "label": "App Secret"
+  },
+  {
+   "description": "Shared secret for GET subscription verification (hub.verify_token).",
+   "fieldname": "meta_verify_token",
+   "fieldtype": "Data",
+   "label": "Verify Token"
+  },
+  {
+   "default": "v21.0",
+   "description": "Graph API version, e.g. v21.0.",
+   "fieldname": "meta_api_version",
+   "fieldtype": "Data",
+   "label": "API Version"
+  },
+  {
    "fieldname": "routing_section",
    "fieldtype": "Section Break",
    "label": "Routing"
@@ -110,7 +153,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-03 00:00:00.000000",
+ "modified": "2026-06-05 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Sopwer Inbox",
  "name": "Inbox Channel",

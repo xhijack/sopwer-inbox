@@ -4,8 +4,11 @@
 
 Only Telegram has its own webhook here. WhatsApp inbound arrives via the
 delegated WhatsApp app (CLAUDE.md §5) — do NOT add a second Wuzapi webhook.
+Meta (Facebook Messenger + Instagram) share a single /meta endpoint.
 """
 
+import hashlib
+import hmac
 import json
 
 import frappe
@@ -87,6 +90,136 @@ def telegram(channel=None, debug=None):
 	except Exception:
 		log.error("telegram webhook FAILED | channel=%r\n%s", channel, frappe.get_traceback())
 		raise
+
+
+# ---------------------------------------------------------------------------
+# Meta (Facebook Messenger + Instagram) webhook
+# ---------------------------------------------------------------------------
+
+_OBJECT_TO_CHANNEL_TYPE = {
+	"page": "Facebook Messenger",
+	"instagram": "Instagram",
+}
+
+
+def _verify_meta_signature(raw_bytes: bytes, header: str, app_secret: str) -> bool:
+	"""Verify X-Hub-Signature-256 = 'sha256=' + HMAC-SHA256(app_secret, body).
+
+	Returns False when header or app_secret are empty/missing.
+	"""
+	if not header or not app_secret:
+		return False
+	expected = "sha256=" + hmac.new(
+		app_secret.encode(), raw_bytes, hashlib.sha256
+	).hexdigest()
+	return hmac.compare_digest(expected, header)
+
+
+def _match_meta_channel(object_type: str, entry_id: str):
+	"""Resolve an (object_type, entry_id) pair to an Inbox Channel doc or None.
+
+	Looks up by meta_page_id == entry_id and channel_type matching the platform.
+	"""
+	channel_type = _OBJECT_TO_CHANNEL_TYPE.get(object_type)
+	if not channel_type:
+		return None
+	results = frappe.get_all(
+		"Inbox Channel",
+		filters={"meta_page_id": entry_id, "channel_type": channel_type, "enabled": 1},
+		fields=["name"],
+		limit=1,
+	)
+	if not results:
+		return None
+	return frappe.get_doc("Inbox Channel", results[0]["name"])
+
+
+@frappe.whitelist(allow_guest=True, methods=["GET", "POST"])
+def meta():
+	"""Meta (Facebook Messenger + Instagram) webhook endpoint.
+
+	GET  — Hub verification challenge (Meta calls this when you register a webhook).
+	POST — Inbound messaging events; verified via X-Hub-Signature-256.
+
+	A single Meta App sends ALL its events here; routing to the correct Inbox
+	Channel is done by matching entry.id (page_id / ig_user_id) + object type.
+	"""
+	log = frappe.logger("sopwer_inbox", allow_site=True)
+	req = getattr(frappe, "request", None)
+
+	# ------------------------------------------------------------------ GET --
+	if req is not None and req.method == "GET":
+		args = req.args
+		mode = args.get("hub.mode")
+		verify_token = args.get("hub.verify_token")
+		challenge = args.get("hub.challenge")
+
+		if mode == "subscribe" and verify_token:
+			# Find any enabled Meta channel whose meta_verify_token matches.
+			channels = frappe.get_all(
+				"Inbox Channel",
+				filters={"channel_type": ["in", ["Facebook Messenger", "Instagram"]], "enabled": 1},
+				fields=["name", "meta_verify_token"],
+			)
+			for ch in channels:
+				if ch.get("meta_verify_token") and ch["meta_verify_token"] == verify_token:
+					log.info("meta GET challenge OK | channel=%r", ch["name"])
+					from werkzeug.wrappers import Response
+					return Response(challenge or "", content_type="text/plain", status=200)
+
+		log.warning("meta GET challenge FAILED | verify_token=%r", verify_token)
+		from werkzeug.wrappers import Response
+		return Response("Forbidden", content_type="text/plain", status=403)
+
+	# ----------------------------------------------------------------- POST --
+	raw = req.get_data() if req is not None else b""
+	try:
+		payload = json.loads(raw or b"{}")
+	except Exception:
+		log.error("meta POST: invalid JSON body")
+		return {"ok": False}
+
+	object_type = payload.get("object", "")
+	log.info("meta POST | object=%r entries=%s", object_type, len(payload.get("entry", [])))
+
+	for entry in payload.get("entry", []):
+		entry_id = entry.get("id")
+		channel_doc = _match_meta_channel(object_type, entry_id)
+		if not channel_doc:
+			log.warning("meta POST: no channel for object=%r entry_id=%r — skipping", object_type, entry_id)
+			continue
+
+		# Verify signature per matched channel
+		app_secret = channel_doc.get_password("meta_app_secret", raise_exception=False) or ""
+		sig_header = (req.headers.get("X-Hub-Signature-256") or "") if req else ""
+
+		if not app_secret:
+			log.warning(
+				"meta POST: meta_app_secret empty on channel %r — skipping entry for security",
+				channel_doc.name,
+			)
+			continue
+
+		if not _verify_meta_signature(raw, sig_header, app_secret):
+			log.warning(
+				"meta POST: invalid signature for channel %r — skipping entry",
+				channel_doc.name,
+			)
+			continue
+
+		adapter = get_adapter(channel_doc)
+		for event in entry.get("messaging", []):
+			try:
+				for norm in adapter.parse_inbound(event):
+					ingest_inbound(norm, channel_doc)
+			except Exception:
+				log.error(
+					"meta POST: error processing event for channel=%r\n%s",
+					channel_doc.name,
+					frappe.get_traceback(),
+				)
+
+	return {"ok": True}
 
 
 @frappe.whitelist()

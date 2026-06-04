@@ -1,0 +1,20 @@
+{
+  "object": "page",
+  "entry": [
+    {
+      "id": "111222333",
+      "time": 1749081600000,
+      "messaging": [
+        {
+          "sender": { "id": "5551234567" },
+          "recipient": { "id": "111222333" },
+          "timestamp": 1749081600000,
+          "message": {
+            "mid": "m_abc123messenger",
+            "text": "Halo, saya mau tanya soal pesanan saya"
+          }
+        }
+      ]
+    }
+  ]
+}

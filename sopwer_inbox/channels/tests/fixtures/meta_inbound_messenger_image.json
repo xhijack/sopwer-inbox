@@ -1,0 +1,28 @@
+{
+  "object": "page",
+  "entry": [
+    {
+      "id": "111222333",
+      "time": 1749081700000,
+      "messaging": [
+        {
+          "sender": { "id": "5551234567" },
+          "recipient": { "id": "111222333" },
+          "timestamp": 1749081700000,
+          "message": {
+            "mid": "m_img456messenger",
+            "attachments": [
+              {
+                "type": "image",
+                "payload": {
+                  "url": "https://cdn.fbsbx.com/v/images/sample.jpg",
+                  "is_reusable": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
