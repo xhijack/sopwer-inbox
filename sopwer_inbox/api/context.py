@@ -3,10 +3,12 @@
 """Contact context panel data.
 
 The ERP card is the moat vs standalone Chatwoot — but it is strictly optional:
-guarded by ``erpnext in installed_apps`` and never required (CLAUDE.md §7, anti-pattern #2).
+guarded by the configured CRM provider and never required (CLAUDE.md §7, anti-pattern #2).
 """
 
 import frappe
+
+from sopwer_inbox.crm.registry import get_provider
 
 
 @frappe.whitelist()
@@ -27,7 +29,7 @@ def get_contact_context(contact=None, conversation=None):
 			"inbox_notes": contact_doc.get("inbox_notes"),
 		},
 		"previous_conversations": _previous_conversations(contact),
-		"erp": get_erp_context(contact_doc),
+		"erp": _provider_context(contact_doc.name),
 	}
 
 
@@ -49,41 +51,12 @@ def _previous_conversations(contact):
 	)
 
 
-def get_erp_context(contact_doc):
-	"""Return last Sales Order + Sales Invoice for the contact's customer.
-
-	Returns ``None`` when ERPNext is not installed or no customer is linked — the
-	UI hides the card entirely in that case (no empty placeholder)."""
-	if "erpnext" not in frappe.get_installed_apps():
+def _provider_context(contact_name):
+	provider = get_provider()
+	if not provider:
 		return None
-
-	customer = _linked_customer(contact_doc)
-	if not customer:
-		return None
-
 	try:
-		sales_orders = frappe.get_all(
-			"Sales Order",
-			filters={"customer": customer},
-			fields=["name", "grand_total", "status", "transaction_date"],
-			order_by="transaction_date desc",
-			limit=3,
-		)
-		invoices = frappe.get_all(
-			"Sales Invoice",
-			filters={"customer": customer, "docstatus": 1},
-			fields=["name", "grand_total", "status", "posting_date"],
-			order_by="posting_date desc",
-			limit=3,
-		)
+		return provider.get_contact_context(contact_name)
 	except Exception:
+		frappe.log_error(title="Sopwer Inbox CRM context failed", message=frappe.get_traceback())
 		return None
-
-	return {"customer": customer, "sales_orders": sales_orders, "invoices": invoices}
-
-
-def _linked_customer(contact_doc):
-	for link in contact_doc.get("links", []):
-		if link.link_doctype == "Customer":
-			return link.link_name
-	return None
