@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useFrappeGetCall } from "frappe-react-sdk";
 import { Ic, ChannelGlyph } from "./icons";
 import { Bubble, NoteCard, ThreadSkeleton } from "./Bubbles";
 import { Composer, type ComposerMode, type OutgoingMedia } from "./Composer";
+import { DocumentPicker } from "./DocumentPicker";
 import { toApiStatus } from "@/lib/format";
 import type {
   AgentVM,
@@ -13,6 +15,7 @@ import type {
   ConvStatus,
 } from "@/types";
 import type { Role } from "@/hooks/useSession";
+import type { useInboxApi } from "@/hooks/useInboxApi";
 
 function StatusSeg({
   status,
@@ -148,6 +151,8 @@ interface ThreadProps {
   onManageCanned: () => void;
   aiEnabled: boolean;
   onSuggest: () => Promise<string>;
+  api: ReturnType<typeof useInboxApi>;
+  mutateMessages: () => void;
 }
 
 export function Thread(props: ThreadProps) {
@@ -172,7 +177,27 @@ export function Thread(props: ThreadProps) {
     onManageCanned,
     aiEnabled,
     onSuggest,
+    api,
+    mutateMessages,
   } = props;
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const { data: sendCfg } = useFrappeGetCall<{ message: { enabled: boolean; doctypes: string[] } }>(
+    "sopwer_inbox.api.document.get_send_config",
+  );
+  const docEnabled = !!(sendCfg?.message?.enabled && sendCfg.message.doctypes.length);
+  const docDoctypes = sendCfg?.message?.doctypes || [];
+
+  async function handleDocSend(doctype: string, name: string) {
+    if (!conv) return;
+    try {
+      await api.sendDocument(conv.id, doctype, name);
+      await mutateMessages();
+    } finally {
+      setPickerOpen(false);
+    }
+  }
 
   const scrollRef = useRef<HTMLDivElement>(null);
   // Track whether the agent is pinned near the bottom; only auto-scroll then.
@@ -244,6 +269,11 @@ export function Thread(props: ThreadProps) {
             myUserId={myUserId}
             onAssign={onAssign}
           />
+          {docEnabled && (
+            <button className="icon-btn doc-send-btn" title="Kirim Dokumen" onClick={() => setPickerOpen(true)}>
+              <Ic.File size={16} />
+            </button>
+          )}
           {cpCollapsed && (
             <button className="icon-btn" title="Buka panel kontak" onClick={onToggleCp}>
               <Ic.PanelRight size={16} />
@@ -311,6 +341,15 @@ export function Thread(props: ThreadProps) {
         aiEnabled={aiEnabled}
         onSuggest={onSuggest}
       />
+
+      {pickerOpen && conv && (
+        <DocumentPicker
+          conversation={conv.id}
+          doctypes={docDoctypes}
+          onClose={() => setPickerOpen(false)}
+          onSend={handleDocSend}
+        />
+      )}
     </section>
   );
 }

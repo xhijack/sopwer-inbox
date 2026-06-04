@@ -46,6 +46,18 @@ def _document_customer(doctype, name):
 
 
 @frappe.whitelist()
+def get_send_config():
+	provider = get_provider()
+	if not provider:
+		return {"enabled": False, "doctypes": []}
+	settings = frappe.get_cached_doc("Inbox CRM Settings")
+	allowed_roles = {r.role for r in settings.get("document_send_roles", [])} or {"Inbox Manager"}
+	user_roles = set(frappe.get_roles())
+	can_send = "System Manager" in user_roles or bool(allowed_roles & user_roles)
+	return {"enabled": can_send, "doctypes": provider.allowed_send_doctypes() if can_send else []}
+
+
+@frappe.whitelist()
 def send_document(conversation, doctype, name):
 	provider = _require_provider()
 	_require_send_permission()

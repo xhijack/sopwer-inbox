@@ -441,6 +441,8 @@ export function InboxApp() {
         onManageCanned={() => setModal("canned")}
         aiEnabled={ai.enabled}
         onSuggest={suggestReply}
+        api={api}
+        mutateMessages={mutateMessages}
       />
 
       {!cpCollapsed && (
