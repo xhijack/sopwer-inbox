@@ -1,22 +1,109 @@
 {
- "actions": [], "creation": "2026-06-04 00:00:00", "doctype": "DocType",
- "engine": "InnoDB", "issingle": 1, "module": "Sopwer Inbox",
- "name": "Inbox CRM Settings", "naming_rule": "Expression",
- "field_order": ["provider", "lead_capture", "external_section", "external_base_url",
-   "external_api_key", "documents_section", "sendable_doctypes", "document_send_roles", "print_format"],
- "fields": [
-  {"fieldname": "provider", "fieldtype": "Select", "label": "Provider", "options": "None\nERPNext\nFrappe CRM\nExternal", "default": "None"},
-  {"fieldname": "lead_capture", "fieldtype": "Select", "label": "Lead Capture", "options": "Off\nManual\nAuto", "default": "Off"},
-  {"fieldname": "external_section", "fieldtype": "Section Break", "label": "External Provider", "depends_on": "eval:doc.provider=='External'"},
-  {"fieldname": "external_base_url", "fieldtype": "Data", "label": "External Base URL"},
-  {"fieldname": "external_api_key", "fieldtype": "Password", "label": "External API Key"},
-  {"fieldname": "documents_section", "fieldtype": "Section Break", "label": "Document Sending"},
-  {"fieldname": "sendable_doctypes", "fieldtype": "Table MultiSelect", "label": "Sendable Document Types", "options": "Inbox Sendable Document Type"},
-  {"fieldname": "document_send_roles", "fieldtype": "Table MultiSelect", "label": "Roles Allowed to Send Documents", "options": "Inbox Document Role"},
-  {"fieldname": "print_format", "fieldtype": "Data", "label": "Print Format (optional)"}
+ "actions": [],
+ "creation": "2026-06-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "provider",
+  "lead_capture",
+  "external_section",
+  "external_base_url",
+  "external_api_key",
+  "documents_section",
+  "sendable_doctypes",
+  "document_send_roles",
+  "print_format"
  ],
+ "fields": [
+  {
+   "default": "None",
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "None\nERPNext\nFrappe CRM\nExternal"
+  },
+  {
+   "default": "Off",
+   "fieldname": "lead_capture",
+   "fieldtype": "Select",
+   "label": "Lead Capture",
+   "options": "Off\nManual\nAuto"
+  },
+  {
+   "depends_on": "eval:doc.provider=='External'",
+   "fieldname": "external_section",
+   "fieldtype": "Section Break",
+   "label": "External Provider"
+  },
+  {
+   "fieldname": "external_base_url",
+   "fieldtype": "Data",
+   "label": "External Base URL"
+  },
+  {
+   "fieldname": "external_api_key",
+   "fieldtype": "Password",
+   "label": "External API Key"
+  },
+  {
+   "fieldname": "documents_section",
+   "fieldtype": "Section Break",
+   "label": "Document Sending"
+  },
+  {
+   "fieldname": "sendable_doctypes",
+   "fieldtype": "Table MultiSelect",
+   "label": "Sendable Document Types",
+   "options": "Inbox Sendable Document Type"
+  },
+  {
+   "fieldname": "document_send_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Roles Allowed to Send Documents",
+   "options": "Inbox Document Role"
+  },
+  {
+   "fieldname": "print_format",
+   "fieldtype": "Data",
+   "label": "Print Format (optional)"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-06-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Sopwer Inbox",
+ "name": "Inbox CRM Settings",
+ "owner": "Administrator",
  "permissions": [
-  {"role": "Inbox Manager", "read": 1, "write": 1, "create": 1},
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1}
- ]
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Inbox Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
 }
