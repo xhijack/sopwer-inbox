@@ -70,3 +70,15 @@ def create_and_link_customer(conversation, customer_name):
 		frappe.throw(_("This conversation has no linked contact."))
 	name = provider.create_and_link_customer(contact, customer_name)
 	return {"ok": True, "customer": name}
+
+
+@frappe.whitelist()
+def unlink_customer(conversation):
+	"""Remove any Customer link from the contact of *conversation*."""
+	provider = _require_provider()
+	_require_inbox_role()
+	contact = _contact_of(conversation)
+	if not contact:
+		frappe.throw(_("This conversation has no linked contact."))
+	provider.unlink_customer(contact)
+	return {"ok": True}

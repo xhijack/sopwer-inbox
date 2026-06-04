@@ -125,10 +125,20 @@ class ERPNextProvider(BaseCRMProvider):
 		if not frappe.db.exists("Customer", customer):
 			frappe.throw(frappe._("Customer {0} not found").format(customer))
 		contact_doc = frappe.get_doc("Contact", contact)
-		for link in contact_doc.get("links", []):
-			if link.link_doctype == "Customer" and link.link_name == customer:
-				return  # already linked
+		# Remove any existing Customer links so there is exactly one after this call.
+		contact_doc.links = [
+			link for link in contact_doc.get("links", [])
+			if link.link_doctype != "Customer"
+		]
 		contact_doc.append("links", {"link_doctype": "Customer", "link_name": customer})
+		contact_doc.save(ignore_permissions=True)
+
+	def unlink_customer(self, contact: str) -> None:
+		contact_doc = frappe.get_doc("Contact", contact)
+		contact_doc.links = [
+			link for link in contact_doc.get("links", [])
+			if link.link_doctype != "Customer"
+		]
 		contact_doc.save(ignore_permissions=True)
 
 	def create_and_link_customer(self, contact: str, customer_name: str) -> str:

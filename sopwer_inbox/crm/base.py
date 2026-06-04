@@ -47,3 +47,7 @@ class BaseCRMProvider:
 	def create_and_link_customer(self, contact: str, customer_name: str) -> str:
 		"""Create a Customer named *customer_name*, link it to *contact*, return its name."""
 		raise NotImplementedError
+
+	def unlink_customer(self, contact: str) -> None:
+		"""Remove all Customer links from *contact*."""
+		raise NotImplementedError

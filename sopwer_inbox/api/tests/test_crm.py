@@ -202,3 +202,52 @@ class TestCreateAndLinkCustomer(InboxTestCase):
 				patch("frappe.has_permission", return_value=True):
 			with self.assertRaises(frappe.PermissionError):
 				crm_api.create_and_link_customer(self.conv.name, "New Corp")
+
+
+class TestUnlinkCustomer(InboxTestCase):
+	"""unlink_customer guards role + contact, delegates to provider."""
+
+	def setUp(self):
+		self.channel = make_channel("CRM Unlink WA", "WhatsApp")
+		self.contact = make_contact("Budi Unlink", "+628111555666")
+		self.conv = make_conversation(
+			self.channel.name, "crm-unlink-1", contact=self.contact.name
+		)
+		frappe.db.set_single_value("Inbox CRM Settings", "provider", "ERPNext")
+
+	def test_rejects_when_no_provider(self):
+		frappe.db.set_single_value("Inbox CRM Settings", "provider", "None")
+		with self.assertRaises(frappe.ValidationError):
+			crm_api.unlink_customer(self.conv.name)
+
+	def test_rejects_when_no_inbox_role(self):
+		fake = MagicMock()
+		with patch.object(crm_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Guest"]):
+			with self.assertRaises(frappe.PermissionError):
+				crm_api.unlink_customer(self.conv.name)
+
+	def test_throws_when_no_contact(self):
+		conv_no_contact = make_conversation(self.channel.name, "crm-unlink-nocontact")
+		fake = MagicMock()
+		with patch.object(crm_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Inbox Agent"]):
+			with self.assertRaises(frappe.ValidationError):
+				crm_api.unlink_customer(conv_no_contact.name)
+
+	def test_calls_provider_unlink_customer_and_returns_ok(self):
+		fake = MagicMock()
+		fake.unlink_customer.return_value = None
+		with patch.object(crm_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Inbox Agent"]):
+			result = crm_api.unlink_customer(self.conv.name)
+		fake.unlink_customer.assert_called_once_with(self.contact.name)
+		self.assertTrue(result["ok"])
+
+	def test_inbox_manager_may_unlink(self):
+		fake = MagicMock()
+		fake.unlink_customer.return_value = None
+		with patch.object(crm_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Inbox Manager"]):
+			result = crm_api.unlink_customer(self.conv.name)
+		self.assertTrue(result["ok"])

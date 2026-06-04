@@ -101,3 +101,107 @@ class TestERPNextSearchCustomers(InboxTestCase):
 			result = p.search_customers("")
 		ga.assert_called_once()
 		self.assertEqual(result, [])
+
+
+class TestERPNextLinkCustomerReplace(InboxTestCase):
+	"""link_customer replaces any existing Customer link (exactly one after call).
+
+	We can't actually insert links with non-existent doctypes on a Frappe-only
+	site, so we use frappe.get_doc + mock to control the contact_doc state.
+	"""
+
+	def _fake_contact_with_links(self, links):
+		"""Return a mock Contact doc whose .links list and .save() we control."""
+		doc = MagicMock()
+		doc.links = list(links)
+
+		def get_links(key, default=None):
+			return doc.links if key == "links" else (default or [])
+
+		doc.get = get_links
+		doc.append = lambda field, row: doc.links.append(frappe._dict(row))
+		return doc
+
+	def test_link_customer_replaces_existing_customer_link(self):
+		"""If a contact already has a Customer link, link_customer swaps it out."""
+		existing = frappe._dict(link_doctype="Customer", link_name="OLD-CUST")
+		fake_doc = self._fake_contact_with_links([existing])
+
+		p = ERPNextProvider()
+		with patch("frappe.db.exists", return_value=True), \
+				patch("frappe.get_doc", return_value=fake_doc):
+			p.link_customer("some-contact", "NEW-CUST")
+
+		customer_links = [l for l in fake_doc.links if l.link_doctype == "Customer"]
+		self.assertEqual(len(customer_links), 1)
+		self.assertEqual(customer_links[0].link_name, "NEW-CUST")
+		fake_doc.save.assert_called_once_with(ignore_permissions=True)
+
+	def test_link_customer_preserves_non_customer_links(self):
+		"""Other link types (e.g. Lead) must survive a link_customer call."""
+		existing = frappe._dict(link_doctype="Lead", link_name="LEAD-001")
+		fake_doc = self._fake_contact_with_links([existing])
+
+		p = ERPNextProvider()
+		with patch("frappe.db.exists", return_value=True), \
+				patch("frappe.get_doc", return_value=fake_doc):
+			p.link_customer("some-contact", "CUST-NEW")
+
+		link_types = {l.link_doctype for l in fake_doc.links}
+		self.assertIn("Lead", link_types)
+		self.assertIn("Customer", link_types)
+
+	def test_link_customer_throws_when_customer_not_found(self):
+		p = ERPNextProvider()
+		with patch("frappe.db.exists", return_value=False):
+			with self.assertRaises(frappe.ValidationError):
+				p.link_customer("some-contact", "GHOST-CUST")
+
+
+class TestERPNextUnlinkCustomer(InboxTestCase):
+	"""unlink_customer removes all Customer Dynamic Links from a contact."""
+
+	def _fake_contact_with_links(self, links):
+		doc = MagicMock()
+		doc.links = list(links)
+
+		def get_links(key, default=None):
+			return doc.links if key == "links" else (default or [])
+
+		doc.get = get_links
+		return doc
+
+	def test_unlink_removes_customer_links(self):
+		links = [frappe._dict(link_doctype="Customer", link_name="CUST-TO-REMOVE")]
+		fake_doc = self._fake_contact_with_links(links)
+
+		p = ERPNextProvider()
+		with patch("frappe.get_doc", return_value=fake_doc):
+			p.unlink_customer("some-contact")
+
+		customer_links = [l for l in fake_doc.links if l.link_doctype == "Customer"]
+		self.assertEqual(len(customer_links), 0)
+		fake_doc.save.assert_called_once_with(ignore_permissions=True)
+
+	def test_unlink_preserves_non_customer_links(self):
+		links = [
+			frappe._dict(link_doctype="Customer", link_name="CUST-X"),
+			frappe._dict(link_doctype="Lead", link_name="LEAD-X"),
+		]
+		fake_doc = self._fake_contact_with_links(links)
+
+		p = ERPNextProvider()
+		with patch("frappe.get_doc", return_value=fake_doc):
+			p.unlink_customer("some-contact")
+
+		remaining = [l.link_doctype for l in fake_doc.links]
+		self.assertNotIn("Customer", remaining)
+		self.assertIn("Lead", remaining)
+
+	def test_unlink_noop_when_no_customer_link(self):
+		"""Should not raise even if there is no customer link."""
+		fake_doc = self._fake_contact_with_links([])
+		p = ERPNextProvider()
+		with patch("frappe.get_doc", return_value=fake_doc):
+			p.unlink_customer("some-contact")
+		fake_doc.save.assert_called_once_with(ignore_permissions=True)

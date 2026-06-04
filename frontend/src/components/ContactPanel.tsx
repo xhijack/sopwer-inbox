@@ -15,9 +15,11 @@ interface LinkCustomerBlockProps {
   convId: string;
   contactName: string;
   onLinked: () => void;
+  onCancel?: () => void;
+  title?: string;
 }
 
-function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockProps) {
+function LinkCustomerBlock({ convId, contactName, onLinked, onCancel, title }: LinkCustomerBlockProps) {
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<CustomerOption[]>([]);
   const [searching, setSearching] = useState(false);
@@ -92,8 +94,17 @@ function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockP
     <div className="cp-sec cp-link-customer">
       <div className="lbl">
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <Ic.UserCheck size={12} /> Hubungkan ke Customer
+          <Ic.UserCheck size={12} /> {title ?? "Hubungkan ke Customer"}
         </span>
+        {onCancel && (
+          <button
+            className="btn btn-sm btn-ghost clc-cancel-btn"
+            onClick={onCancel}
+            style={{ marginLeft: "auto", padding: "3px 8px", fontSize: 11 }}
+          >
+            Batal
+          </button>
+        )}
       </div>
       <p className="clc-hint">
         Kaitkan kontak ini ke Customer ERPNext untuk melihat order/invoice & mengirim dokumen.
@@ -195,11 +206,29 @@ export function ContactPanel({
   const [addingTag, setAddingTag] = useState(false);
   const [tagVal, setTagVal] = useState("");
   const [noteVal, setNoteVal] = useState("");
+  const [relinking, setRelinking] = useState(false);
+  const [unlinkError, setUnlinkError] = useState<string | null>(null);
+
+  const { call: callUnlink, loading: unlinking } = useFrappePostCall(
+    "sopwer_inbox.api.crm.unlink_customer",
+  );
 
   const inboxNotes = context?.contact?.inbox_notes ?? "";
   useEffect(() => {
     setNoteVal(inboxNotes || "");
   }, [inboxNotes, conv?.id]);
+
+  async function doUnlink() {
+    if (!conv) return;
+    setUnlinkError(null);
+    try {
+      await callUnlink({ conversation: conv.id });
+      setRelinking(false);
+      onCustomerLinked?.();
+    } catch (e: unknown) {
+      setUnlinkError(e instanceof Error ? e.message : "Gagal melepas customer.");
+    }
+  }
 
   if (!conv) {
     return (
@@ -373,7 +402,7 @@ export function ContactPanel({
           </div>
         </div>
 
-        {!erp && conv && (
+        {!erp && conv && !relinking && (
           <LinkCustomerBlock
             convId={conv.id}
             contactName={ct.name}
@@ -381,44 +410,85 @@ export function ContactPanel({
           />
         )}
 
-        {erp && erpDocs.length > 0 && (
+        {erp && (
           <div className="cp-sec">
-            <div className="lbl">
-              <span>Dari ERPNext</span>
+            <div className="lbl" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span>DARI ERPNEXT</span>
               <span style={{ color: "var(--sw-green-600)", textTransform: "none", letterSpacing: 0 }}>
                 ● Terhubung
               </span>
             </div>
-            {erpDocs.map((o) => {
-              const isInvoice = o.name.toLowerCase().includes("inv") || (erp.invoices || []).includes(o);
-              const paid = (o.status || "").toLowerCase().includes("paid");
-              return (
-                <div className="erp-card" key={o.name}>
-                  <div className="eh">
-                    <span className="no">{o.name}</span>
-                    <span
-                      className="lbl"
-                      style={{ marginLeft: "auto", marginBottom: 0, letterSpacing: 0, textTransform: "none" }}
-                    >
-                      {isInvoice ? "Invoice" : "Sales Order"}
-                    </span>
-                  </div>
-                  <div className="eb">
-                    <div>
-                      <div className="amt">{rupiah(o.grand_total, o.currency || "Rp")}</div>
-                      <div className="dt">{o.transaction_date || o.posting_date || ""}</div>
+
+            {/* Linked customer name + actions */}
+            <div className="erp-customer-row">
+              <div className="erp-customer-name">
+                <Ic.UserCheck size={12} style={{ flexShrink: 0, color: "var(--sw-green-600)" }} />
+                <span>{erp.customer}</span>
+              </div>
+              <div className="erp-customer-actions">
+                <button
+                  className="btn btn-sm btn-outline"
+                  disabled={unlinking}
+                  onClick={() => { setRelinking(true); setUnlinkError(null); }}
+                >
+                  Ubah
+                </button>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  disabled={unlinking}
+                  onClick={doUnlink}
+                >
+                  {unlinking ? "…" : "Lepas"}
+                </button>
+              </div>
+            </div>
+            {unlinkError && <div className="clc-error">{unlinkError}</div>}
+
+            {/* Relink panel (shown when user clicks Ubah) */}
+            {relinking && conv && (
+              <LinkCustomerBlock
+                convId={conv.id}
+                contactName={ct.name}
+                onLinked={() => { setRelinking(false); onCustomerLinked?.(); }}
+                onCancel={() => setRelinking(false)}
+                title="Ganti Customer"
+              />
+            )}
+
+            {erpDocs.length > 0 && (
+              <>
+                {erpDocs.map((o) => {
+                  const isInvoice = o.name.toLowerCase().includes("inv") || (erp.invoices || []).includes(o);
+                  const paid = (o.status || "").toLowerCase().includes("paid");
+                  return (
+                    <div className="erp-card" key={o.name}>
+                      <div className="eh">
+                        <span className="no">{o.name}</span>
+                        <span
+                          className="lbl"
+                          style={{ marginLeft: "auto", marginBottom: 0, letterSpacing: 0, textTransform: "none" }}
+                        >
+                          {isInvoice ? "Invoice" : "Sales Order"}
+                        </span>
+                      </div>
+                      <div className="eb">
+                        <div>
+                          <div className="amt">{rupiah(o.grand_total, o.currency || "Rp")}</div>
+                          <div className="dt">{o.transaction_date || o.posting_date || ""}</div>
+                        </div>
+                        <span className={"pill " + (paid ? "paid" : "pending")}>
+                          <span className="dot" />
+                          {paid ? "Lunas" : o.status || "Menunggu"}
+                        </span>
+                      </div>
                     </div>
-                    <span className={"pill " + (paid ? "paid" : "pending")}>
-                      <span className="dot" />
-                      {paid ? "Lunas" : o.status || "Menunggu"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            <a className="erp-link" href="#" onClick={(e) => e.preventDefault()}>
-              Lihat di ERPNext <Ic.ChevronRight size={13} />
-            </a>
+                  );
+                })}
+                <a className="erp-link" href="#" onClick={(e) => e.preventDefault()}>
+                  Lihat di ERPNext <Ic.ChevronRight size={13} />
+                </a>
+              </>
+            )}
           </div>
         )}
 
