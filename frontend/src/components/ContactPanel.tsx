@@ -1,7 +1,156 @@
 import { useState, useEffect } from "react";
+import { useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk";
 import { Ic, ChannelGlyph } from "./icons";
 import { tagClass, rupiah } from "@/lib/format";
 import type { ChannelVM, ContactContext, ConversationVM } from "@/types";
+
+/* ── Suggestion / search result row ── */
+interface CustomerOption {
+  name: string;
+  label: string;
+  reason?: string;
+}
+
+interface LinkCustomerBlockProps {
+  convId: string;
+  contactName: string;
+  onLinked: () => void;
+}
+
+function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockProps) {
+  const [searchQ, setSearchQ] = useState("");
+  const [searchResults, setSearchResults] = useState<CustomerOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  const { data: optData, mutate: mutateOpts } = useFrappeGetCall<{
+    message: { linked: string | null; suggestions: CustomerOption[] };
+  }>(
+    "sopwer_inbox.api.crm.customer_options",
+    { conversation: convId },
+    `crm-opts:${convId}`,
+    { revalidateOnFocus: false },
+  );
+
+  const suggestions = optData?.message?.suggestions ?? [];
+  const linked = optData?.message?.linked ?? null;
+
+  const { call: callLink, loading: linking } = useFrappePostCall(
+    "sopwer_inbox.api.crm.link_customer",
+  );
+  const { call: callSearch } = useFrappePostCall(
+    "sopwer_inbox.api.crm.search_customers",
+  );
+  const { call: callCreate, loading: creating } = useFrappePostCall(
+    "sopwer_inbox.api.crm.create_and_link_customer",
+  );
+
+  // If already linked, nothing to render
+  if (linked) return null;
+
+  async function doLink(customer: string) {
+    setLinkError(null);
+    try {
+      await callLink({ conversation: convId, customer });
+      mutateOpts();
+      onLinked();
+    } catch (e: unknown) {
+      setLinkError(e instanceof Error ? e.message : "Gagal menghubungkan customer.");
+    }
+  }
+
+  async function doSearch(q: string) {
+    setSearchQ(q);
+    if (!q.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      const res = await callSearch({ q }) as { message: CustomerOption[] } | undefined;
+      setSearchResults(res?.message ?? []);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function doCreate() {
+    setCreateError(null);
+    try {
+      await callCreate({ conversation: convId, customer_name: contactName });
+      mutateOpts();
+      onLinked();
+    } catch (e: unknown) {
+      setCreateError(e instanceof Error ? e.message : "Gagal membuat customer.");
+    }
+  }
+
+  return (
+    <div className="cp-sec cp-link-customer">
+      <div className="lbl">Hubungkan ke Customer</div>
+
+      {suggestions.length > 0 && (
+        <div className="clc-suggestions">
+          {suggestions.map((s) => (
+            <div key={s.name} className="clc-row">
+              <div className="clc-info">
+                <span className="clc-label">Sepertinya: {s.label}</span>
+                {s.reason && <span className="clc-reason">{s.reason}</span>}
+              </div>
+              <button
+                className="btn btn-sm btn-outline"
+                disabled={linking}
+                onClick={() => doLink(s.name)}
+              >
+                {linking ? "…" : "Hubungkan"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="clc-search-wrap">
+        <input
+          className="clc-search"
+          placeholder="Cari customer…"
+          value={searchQ}
+          onChange={(e) => doSearch(e.target.value)}
+        />
+        {searching && <span className="clc-searching">Mencari…</span>}
+        {!searching && searchResults.length > 0 && (
+          <div className="clc-results">
+            {searchResults.map((r) => (
+              <div key={r.name} className="clc-row">
+                <span className="clc-label">{r.label}</span>
+                <button
+                  className="btn btn-sm btn-outline"
+                  disabled={linking}
+                  onClick={() => doLink(r.name)}
+                >
+                  {linking ? "…" : "Hubungkan"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button
+        className="btn btn-sm btn-ghost clc-create-btn"
+        disabled={creating}
+        onClick={doCreate}
+      >
+        {creating ? (
+          <span className="spin" style={{ display: "inline-flex" }}><Ic.Loader size={13} /></span>
+        ) : (
+          <Ic.Plus size={13} />
+        )}
+        Buat customer baru ({contactName || "kontak"})
+      </button>
+
+      {linkError && <div className="clc-error">{linkError}</div>}
+      {createError && <div className="clc-error">{createError}</div>}
+    </div>
+  );
+}
 
 interface ContactPanelProps {
   conv: ConversationVM | null;
@@ -13,6 +162,7 @@ interface ContactPanelProps {
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onNote: (note: string) => void;
+  onCustomerLinked?: () => void;
 }
 
 export function ContactPanel({
@@ -25,6 +175,7 @@ export function ContactPanel({
   onAddTag,
   onRemoveTag,
   onNote,
+  onCustomerLinked,
 }: ContactPanelProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
@@ -208,6 +359,14 @@ export function ContactPanel({
             <span className="v">{prev.length}</span>
           </div>
         </div>
+
+        {!erp && conv && (
+          <LinkCustomerBlock
+            convId={conv.id}
+            contactName={ct.name}
+            onLinked={onCustomerLinked ?? (() => {})}
+          />
+        )}
 
         {erp && erpDocs.length > 0 && (
           <div className="cp-sec">

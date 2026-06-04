@@ -467,6 +467,7 @@ export function InboxApp() {
           onAddTag={addTag}
           onRemoveTag={removeTag}
           onNote={setNote}
+          onCustomerLinked={() => { mutateContext(); }}
         />
       )}
 
