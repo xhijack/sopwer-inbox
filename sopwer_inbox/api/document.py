@@ -38,6 +38,8 @@ def list_sendable_documents(conversation, doctype, q=""):
 	if doctype not in provider.allowed_send_doctypes():
 		frappe.throw(_("Document type {0} is not enabled.").format(doctype))
 	customer = _conversation_customer(conversation)
+	if not customer:
+		return []
 	return provider.list_documents(doctype, customer, q)
 
 

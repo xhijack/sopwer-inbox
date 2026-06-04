@@ -28,6 +28,21 @@ class TestDocumentApi(InboxTestCase):
 			rows = doc_api.list_sendable_documents(self.conv.name, "Sales Invoice")
 		self.assertEqual(rows[0]["name"], "INV-1")
 
+	def test_list_empty_when_no_conversation_customer(self):
+		"""list_sendable_documents must return [] and NOT call list_documents when the
+		conversation has no linked ERP customer (fail-closed, mirrors send_document)."""
+		mock_list_docs = MagicMock(return_value=[{"name": "INV-LEAK"}])
+		fake = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"list_documents": mock_list_docs,
+		})()
+		with patch.object(doc_api, "get_provider", return_value=fake), patch.object(
+			doc_api, "_conversation_customer", return_value=None
+		):
+			result = doc_api.list_sendable_documents(self.conv.name, "Sales Invoice")
+		self.assertEqual(result, [])
+		mock_list_docs.assert_not_called()
+
 	def test_list_rejects_without_permission(self):
 		fake = type("P", (), {"allowed_send_doctypes": lambda self: ["Sales Invoice"]})()
 		with patch.object(doc_api, "get_provider", return_value=fake), patch.object(
