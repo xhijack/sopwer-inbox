@@ -66,3 +66,7 @@ class ERPNextProvider(BaseCRMProvider):
 			filters["name"] = ["like", f"%{q}%"]
 		fields = _DOC_FIELDS.get(doctype, ["name", "grand_total", "status"])
 		return frappe.get_all(doctype, filters=filters, fields=fields, order_by="modified desc", limit=20)
+
+	def get_document_pdf(self, doctype: str, name: str, print_format: str | None = None) -> bytes:
+		pf = print_format or frappe.db.get_single_value("Inbox CRM Settings", "print_format") or None
+		return frappe.get_print(doctype, name, print_format=pf, as_pdf=True)

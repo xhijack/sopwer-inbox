@@ -38,3 +38,11 @@ class TestERPNextDocuments(InboxTestCase):
 
 	def test_allowed_doctypes_from_settings(self):
 		self.assertEqual(ERPNextProvider().allowed_send_doctypes(), ["Sales Invoice"])
+
+
+class TestERPNextPdf(InboxTestCase):
+	def test_get_document_pdf_calls_get_print(self):
+		with patch("frappe.get_print", return_value=b"%PDF-1.4 fake") as gp:
+			data = ERPNextProvider().get_document_pdf("Sales Invoice", "INV-1")
+		self.assertEqual(data, b"%PDF-1.4 fake")
+		gp.assert_called_once()
