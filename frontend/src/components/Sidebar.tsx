@@ -31,6 +31,8 @@ interface SidebarProps {
   fullName: string;
   collapsed: boolean;
   onToggle: () => void;
+  muted: boolean;
+  onToggleMute: () => void;
 }
 
 export function Sidebar({
@@ -51,6 +53,8 @@ export function Sidebar({
   fullName,
   collapsed,
   onToggle,
+  muted,
+  onToggleMute,
 }: SidebarProps) {
   const [statusOpen, setStatusOpen] = useState(false);
   const sref = useRef<HTMLDivElement>(null);
@@ -189,6 +193,14 @@ export function Sidebar({
             {agentStatus === "away" ? "Away" : "Available"}
           </div>
         </div>
+        <button
+          className="sb-collapse-btn"
+          title={muted ? "Aktifkan suara" : "Bisukan suara"}
+          onClick={onToggleMute}
+          style={{ marginRight: 2 }}
+        >
+          {muted ? <Ic.VolumeX size={15} /> : <Ic.Volume2 size={15} />}
+        </button>
         <span style={{ color: "var(--sw-ink-400)", cursor: "pointer", display: "flex" }}>
           <Ic.ChevronUp size={15} onClick={() => setStatusOpen((o) => !o)} />
         </span>

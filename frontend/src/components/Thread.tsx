@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useFrappeGetCall } from "frappe-react-sdk";
 import { Ic, ChannelGlyph } from "./icons";
+import { playOutgoing } from "@/lib/sound";
 import { Bubble, NoteCard, ThreadSkeleton } from "./Bubbles";
 import { Composer, type ComposerMode, type OutgoingMedia } from "./Composer";
 import { DocumentPicker } from "./DocumentPicker";
@@ -193,6 +194,7 @@ export function Thread(props: ThreadProps) {
     if (!conv) return;
     try {
       await api.sendDocument(conv.id, doctype, name);
+      playOutgoing();
       await mutateMessages();
     } finally {
       setPickerOpen(false);
@@ -269,11 +271,6 @@ export function Thread(props: ThreadProps) {
             myUserId={myUserId}
             onAssign={onAssign}
           />
-          {docEnabled && (
-            <button className="icon-btn doc-send-btn" title="Kirim Dokumen" onClick={() => setPickerOpen(true)}>
-              <Ic.File size={16} />
-            </button>
-          )}
           {cpCollapsed && (
             <button className="icon-btn" title="Buka panel kontak" onClick={onToggleCp}>
               <Ic.PanelRight size={16} />
@@ -340,6 +337,8 @@ export function Thread(props: ThreadProps) {
         onManageCanned={onManageCanned}
         aiEnabled={aiEnabled}
         onSuggest={onSuggest}
+        docEnabled={docEnabled}
+        onOpenDocPicker={() => setPickerOpen(true)}
       />
 
       {pickerOpen && conv && (

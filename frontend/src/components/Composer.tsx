@@ -21,6 +21,8 @@ interface ComposerProps {
   /** Returns a draft, or rejects to surface the AI-failed state. */
   onSuggest: () => Promise<string>;
   disabled?: boolean;
+  docEnabled?: boolean;
+  onOpenDocPicker?: () => void;
 }
 
 export function Composer({
@@ -32,6 +34,8 @@ export function Composer({
   aiEnabled,
   onSuggest,
   disabled,
+  docEnabled,
+  onOpenDocPicker,
 }: ComposerProps) {
   const [val, setVal] = useState("");
   const [mode, setMode] = useState<ComposerMode>("reply");
@@ -302,6 +306,11 @@ export function Composer({
           <button className="tool" title="Emoji">
             <Ic.Smile size={18} />
           </button>
+          {docEnabled && (
+            <button className="tool" title="Kirim dokumen" onClick={onOpenDocPicker}>
+              <Ic.File size={18} />
+            </button>
+          )}
           {!isNote && aiEnabled && (
             <button
               className="ai-btn"

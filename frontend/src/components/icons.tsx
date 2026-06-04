@@ -48,6 +48,8 @@ import {
   MessageSquare,
   Loader2,
   Wifi,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 export const Ic = {
@@ -99,6 +101,8 @@ export const Ic = {
   MessageSquare,
   Loader: Loader2,
   Wifi,
+  Volume2,
+  VolumeX,
 };
 
 export function WaGlyph({ size = 11 }: { size?: number }) {

@@ -24,6 +24,7 @@ import { useContactContext } from "./hooks/useContactContext";
 import { useInboxApi } from "./hooks/useInboxApi";
 import { messageToVM } from "./lib/mappers";
 import { hhmm } from "./lib/format";
+import { setMuted, playIncoming, playOutgoing } from "./lib/sound";
 import type {
   ConvStatus,
   ConversationVM,
@@ -56,6 +57,7 @@ export function InboxApp() {
   const [bannerForced, setBannerForced] = useState(false);
 
   const [agentStatus, setAgentStatus] = useState<"available" | "away">("available");
+  const [muted, setMuted_] = useState(false);
   const [modal, setModal] = useState<null | "canned" | "ai">(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [ai, setAi] = useState<AIConfig>({
@@ -65,6 +67,8 @@ export function InboxApp() {
     model: "llama3.1:8b",
     apiKey: "",
   });
+
+  useEffect(() => setMuted(muted), [muted]);
 
   // Local optimistic message overlay, keyed by conversation id.
   const [optimistic, setOptimistic] = useState<Record<string, MessageVM[]>>({});
@@ -196,6 +200,7 @@ export function InboxApp() {
           message_type: media.type,
           media_path: media.url,
         });
+        playOutgoing();
         await mutateMessages();
         await mutateConvs();
         setOptimistic((o) => ({ ...o, [selId]: (o[selId] || []).filter((m) => m.id !== tmpId) }));
@@ -234,6 +239,7 @@ export function InboxApp() {
 
     try {
       await api.sendMessage({ conversation: selId, text });
+      playOutgoing();
       await mutateMessages();
       await mutateConvs();
       setOptimistic((o) => ({ ...o, [selId]: (o[selId] || []).filter((m) => m.id !== tmpId) }));
@@ -339,6 +345,9 @@ export function InboxApp() {
   /* ── realtime ── */
   useFrappeEventListener("inbox:new_message", (ev: NewMessageEvent) => {
     mutateConvs();
+    if (ev.direction === "Incoming" && !ev.is_internal) {
+      playIncoming();
+    }
     if (ev.conversation === selId) {
       mutateMessages();
       return;
@@ -390,6 +399,8 @@ export function InboxApp() {
         fullName={session.fullName}
         collapsed={sbCollapsed}
         onToggle={() => setSbCollapsed((v) => !v)}
+        muted={muted}
+        onToggleMute={() => setMuted_((v) => !v)}
       />
 
       <ConversationList
