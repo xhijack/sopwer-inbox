@@ -21,7 +21,7 @@ class ERPNextProvider(BaseCRMProvider):
 	def is_available(self) -> bool:
 		return "erpnext" in frappe.get_installed_apps()
 
-	def get_contact_context(self, contact: str) -> dict | None:
+	def get_contact_context(self, contact: str, company: str | None = None) -> dict | None:
 		if not self.is_available():
 			return None
 		customer = self._linked_customer(contact)
@@ -30,8 +30,8 @@ class ERPNextProvider(BaseCRMProvider):
 		return {
 			"customer": customer,
 			"customer_since": frappe.db.get_value("Customer", customer, "creation"),
-			"sales_orders": self._docs("Sales Order", customer),
-			"invoices": self._docs("Sales Invoice", customer),
+			"sales_orders": self._docs("Sales Order", customer, company=company),
+			"invoices": self._docs("Sales Invoice", customer, company=company),
 		}
 
 	def linked_customer(self, contact: str):
@@ -45,12 +45,15 @@ class ERPNextProvider(BaseCRMProvider):
 				return link.link_name
 		return None
 
-	def _docs(self, doctype: str, customer: str, limit: int = 3) -> list:
+	def _docs(self, doctype: str, customer: str, limit: int = 3, company: str | None = None) -> list:
 		"""Recent documents of one type for a customer (panel cards)."""
 		try:
+			filters = {"customer": customer, "docstatus": ["<", 2]}
+			if company:
+				filters["company"] = company
 			return frappe.get_all(
 				doctype,
-				filters={"customer": customer, "docstatus": ["<", 2]},
+				filters=filters,
 				fields=_CONTEXT_FIELDS[doctype],
 				order_by="modified desc",
 				limit=limit,
@@ -62,7 +65,7 @@ class ERPNextProvider(BaseCRMProvider):
 		settings = frappe.get_cached_doc("Inbox CRM Settings")
 		return [d.document_type for d in settings.get("sendable_doctypes", [])]
 
-	def list_documents(self, doctype: str, customer: str | None, q: str = "") -> list[dict]:
+	def list_documents(self, doctype: str, customer: str | None, q: str = "", company: str | None = None) -> list[dict]:
 		if doctype not in self.allowed_send_doctypes():
 			frappe.throw(frappe._("Document type {0} is not enabled for sending.").format(doctype))
 		filters = {"docstatus": ["<", 2]}
@@ -70,6 +73,8 @@ class ERPNextProvider(BaseCRMProvider):
 			filters["customer"] = customer
 		if q:
 			filters["name"] = ["like", f"%{q}%"]
+		if company:
+			filters["company"] = company
 		fields = _LIST_FIELDS.get(doctype, ["name", "grand_total", "status"])
 		return frappe.get_all(doctype, filters=filters, fields=fields, order_by="modified desc", limit=20)
 

@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import frappe
 
@@ -20,7 +20,7 @@ class TestDocumentApi(InboxTestCase):
 	def test_lists_via_provider(self):
 		fake = type("P", (), {
 			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
-			"list_documents": lambda self, dt, cust, q="": [{"name": "INV-1"}],
+			"list_documents": lambda self, dt, cust, q="", company=None: [{"name": "INV-1"}],
 		})()
 		with patch.object(doc_api, "get_provider", return_value=fake), patch.object(
 			doc_api, "_conversation_customer", return_value="CUST-1"
@@ -134,3 +134,125 @@ class TestDocumentApi(InboxTestCase):
 			result = doc_api.get_send_config()
 		self.assertFalse(result["enabled"])
 		self.assertEqual(result["doctypes"], [])
+
+
+# ---------------------------------------------------------------------------
+# Company scoping tests
+# ---------------------------------------------------------------------------
+
+class TestDocumentCompanyScoping(InboxTestCase):
+	"""list_sendable_documents passes channel company; send_document guards cross-company."""
+
+	def setUp(self):
+		self.channel = make_channel("CompScope TG", "Telegram")
+		self.conv = make_conversation(self.channel.name, "compscope-1")
+		frappe.db.set_single_value("Inbox CRM Settings", "provider", "ERPNext")
+
+	def test_list_forwards_channel_company_to_provider(self):
+		"""list_sendable_documents must pass company= from the channel to list_documents."""
+		list_docs_calls = []
+
+		def fake_list_docs(self_inner, dt, cust, q="", company=None):
+			list_docs_calls.append({"company": company})
+			return []
+
+		fake = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"list_documents": fake_list_docs,
+		})()
+
+		with patch.object(doc_api, "get_provider", return_value=fake), \
+				patch.object(doc_api, "_conversation_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "conversation_company", return_value="PT Sopwer"):
+			doc_api.list_sendable_documents(self.conv.name, "Sales Invoice")
+
+		self.assertEqual(len(list_docs_calls), 1)
+		self.assertEqual(list_docs_calls[0]["company"], "PT Sopwer")
+
+	def test_list_passes_none_company_when_channel_has_no_company(self):
+		"""When the channel has no company, list_documents receives company=None."""
+		list_docs_calls = []
+
+		def fake_list_docs(self_inner, dt, cust, q="", company=None):
+			list_docs_calls.append({"company": company})
+			return []
+
+		fake = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"list_documents": fake_list_docs,
+		})()
+
+		with patch.object(doc_api, "get_provider", return_value=fake), \
+				patch.object(doc_api, "_conversation_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "conversation_company", return_value=None):
+			doc_api.list_sendable_documents(self.conv.name, "Sales Invoice")
+
+		self.assertIsNone(list_docs_calls[0]["company"])
+
+	def test_send_blocked_on_company_mismatch(self):
+		"""send_document throws when channel company differs from document company."""
+		fake_provider = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"get_document_pdf": lambda self, dt, name, print_format=None: b"%PDF",
+		})()
+		with patch.object(doc_api, "get_provider", return_value=fake_provider), \
+				patch.object(doc_api, "_require_send_permission"), \
+				patch.object(doc_api, "_conversation_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "_document_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "conversation_company", return_value="PT Sopwer"), \
+				patch("frappe.db.get_value", return_value="PT Other"):
+			with self.assertRaises(frappe.ValidationError):
+				doc_api.send_document(self.conv.name, "Sales Invoice", "INV-CROSS")
+
+	def test_send_proceeds_when_company_matches(self):
+		"""send_document proceeds without error when channel and document company match."""
+		fake_provider = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"get_document_pdf": lambda self, dt, name, print_format=None: b"%PDF-1.4",
+		})()
+		sent = {}
+
+		def fake_send(conversation, text=None, message_type="Text", media_path=None, **k):
+			sent["ok"] = True
+			return {"name": "msg-ok"}
+
+		fake_file = MagicMock()
+		fake_file.file_url = "/private/files/INV-OK.pdf"
+
+		with patch.object(doc_api, "get_provider", return_value=fake_provider), \
+				patch.object(doc_api, "_require_send_permission"), \
+				patch.object(doc_api, "_conversation_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "_document_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "conversation_company", return_value="PT Sopwer"), \
+				patch("frappe.db.get_value", return_value="PT Sopwer"), \
+				patch("sopwer_inbox.api.conversation.send_message", side_effect=fake_send), \
+				patch("frappe.get_doc", return_value=fake_file):
+			doc_api.send_document(self.conv.name, "Sales Invoice", "INV-OK")
+
+		self.assertTrue(sent.get("ok"))
+
+	def test_send_proceeds_when_channel_company_blank(self):
+		"""send_document proceeds without company guard when channel has no company."""
+		fake_provider = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+			"get_document_pdf": lambda self, dt, name, print_format=None: b"%PDF-1.4",
+		})()
+		sent = {}
+
+		def fake_send(conversation, text=None, message_type="Text", media_path=None, **k):
+			sent["ok"] = True
+			return {"name": "msg-noco"}
+
+		fake_file = MagicMock()
+		fake_file.file_url = "/private/files/INV-NOCO.pdf"
+
+		with patch.object(doc_api, "get_provider", return_value=fake_provider), \
+				patch.object(doc_api, "_require_send_permission"), \
+				patch.object(doc_api, "_conversation_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "_document_customer", return_value="CUST-1"), \
+				patch.object(doc_api, "conversation_company", return_value=None), \
+				patch("sopwer_inbox.api.conversation.send_message", side_effect=fake_send), \
+				patch("frappe.get_doc", return_value=fake_file):
+			doc_api.send_document(self.conv.name, "Sales Invoice", "INV-NOCO")
+
+		self.assertTrue(sent.get("ok"))

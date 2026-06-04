@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 
 from sopwer_inbox.crm.registry import get_provider
+from sopwer_inbox.scope import conversation_company
 
 
 def _require_provider():
@@ -42,7 +43,8 @@ def list_sendable_documents(conversation, doctype, q=""):
 	customer = _conversation_customer(conversation)
 	if not customer:
 		return []
-	return provider.list_documents(doctype, customer, q)
+	company = conversation_company(conversation)
+	return provider.list_documents(doctype, customer, q, company=company)
 
 
 def _document_customer(doctype, name):
@@ -79,6 +81,15 @@ def send_document(conversation, doctype, name):
 			_("This document does not match the conversation's customer. "
 			  "Link the contact to the correct customer first.")
 		)
+
+	channel_company = conversation_company(conversation)
+	if channel_company:
+		doc_company = frappe.db.get_value(doctype, name, "company")
+		if doc_company and doc_company != channel_company:
+			frappe.throw(
+				_("Dokumen {0} milik company {1}, sedangkan channel ini untuk company {2}. "
+				  "Tidak bisa dikirim lintas company.").format(name, doc_company, channel_company)
+			)
 
 	pdf = provider.get_document_pdf(doctype, name)
 	file_doc = frappe.get_doc({

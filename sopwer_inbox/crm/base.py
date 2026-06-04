@@ -6,13 +6,13 @@ class BaseCRMProvider:
 	def is_available(self) -> bool:
 		raise NotImplementedError
 
-	def get_contact_context(self, contact: str) -> dict | None:
+	def get_contact_context(self, contact: str, company: str | None = None) -> dict | None:
 		return None
 
 	def allowed_send_doctypes(self) -> list[str]:
 		return []
 
-	def list_documents(self, doctype: str, customer: str | None, q: str = "") -> list[dict]:
+	def list_documents(self, doctype: str, customer: str | None, q: str = "", company: str | None = None) -> list[dict]:
 		return []
 
 	def get_document_pdf(self, doctype: str, name: str, print_format: str | None = None) -> bytes:

@@ -18,7 +18,8 @@
   "wuzapi_token",
   "wuzapi_instance",
   "routing_section",
-  "webhook_secret"
+  "webhook_secret",
+  "company"
  ],
  "fields": [
   {
@@ -97,6 +98,14 @@
    "fieldname": "webhook_secret",
    "fieldtype": "Password",
    "label": "Webhook Secret"
+  },
+  {
+   "description": "Batasi dokumen ERP yang tampil & bisa dikirim ke company ini. Kosongkan untuk tanpa batasan.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company (ERPNext)",
+   "options": "Company",
+   "reqd": 0
   }
  ],
  "index_web_pages_for_search": 1,

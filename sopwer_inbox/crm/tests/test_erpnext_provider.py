@@ -220,3 +220,83 @@ class TestERPNextUnlinkCustomer(InboxTestCase):
 		with patch("frappe.get_doc", return_value=fake_doc):
 			p.unlink_customer("some-contact")
 		fake_doc.save.assert_called_once_with(ignore_permissions=True)
+
+
+class TestERPNextCompanyScoping(InboxTestCase):
+    """_docs and list_documents add company to filters when provided."""
+
+    def setUp(self):
+        frappe.db.set_single_value("Inbox CRM Settings", "provider", "ERPNext")
+        s = frappe.get_doc("Inbox CRM Settings")
+        s.set("sendable_doctypes", [])
+        s.append("sendable_doctypes", {"document_type": "Sales Invoice"})
+        s.flags.ignore_links = True
+        s.save(ignore_permissions=True)
+
+    def test_docs_adds_company_filter_when_given(self):
+        p = ERPNextProvider()
+        with patch("frappe.get_all", return_value=[]) as ga:
+            p._docs("Sales Invoice", "CUST-1", company="PT Sopwer")
+        call_kwargs = ga.call_args
+        filters = call_kwargs[1].get("filters") or call_kwargs[0][1]
+        self.assertEqual(filters.get("company"), "PT Sopwer")
+
+    def test_docs_no_company_filter_when_none(self):
+        p = ERPNextProvider()
+        with patch("frappe.get_all", return_value=[]) as ga:
+            p._docs("Sales Invoice", "CUST-1")
+        call_kwargs = ga.call_args
+        filters = call_kwargs[1].get("filters") or call_kwargs[0][1]
+        self.assertNotIn("company", filters)
+
+    def test_get_contact_context_passes_company_to_docs(self):
+        contact = make_contact("ScopeCust", "+628000999111")
+        p = ERPNextProvider()
+        docs_calls = []
+
+        def fake_docs(doctype, customer, limit=3, company=None):
+            docs_calls.append({"doctype": doctype, "company": company})
+            return []
+
+        with patch.object(p, "is_available", return_value=True), \
+                patch.object(p, "_linked_customer", return_value="CUST-SCOPE"), \
+                patch.object(p, "_docs", side_effect=fake_docs), \
+                patch("frappe.db.get_value", return_value=None):
+            p.get_contact_context(contact.name, company="PT Sopwer")
+
+        for call in docs_calls:
+            self.assertEqual(call["company"], "PT Sopwer")
+
+    def test_get_contact_context_no_company_when_none(self):
+        contact = make_contact("ScopeNoCo", "+628000999222")
+        p = ERPNextProvider()
+        docs_calls = []
+
+        def fake_docs(doctype, customer, limit=3, company=None):
+            docs_calls.append({"doctype": doctype, "company": company})
+            return []
+
+        with patch.object(p, "is_available", return_value=True), \
+                patch.object(p, "_linked_customer", return_value="CUST-SCOPE2"), \
+                patch.object(p, "_docs", side_effect=fake_docs), \
+                patch("frappe.db.get_value", return_value=None):
+            p.get_contact_context(contact.name)
+
+        for call in docs_calls:
+            self.assertIsNone(call["company"])
+
+    def test_list_documents_adds_company_filter(self):
+        p = ERPNextProvider()
+        with patch("frappe.get_all", return_value=[]) as ga:
+            p.list_documents("Sales Invoice", "CUST-1", company="PT Sopwer")
+        call_kwargs = ga.call_args
+        filters = call_kwargs[1].get("filters") or call_kwargs[0][1]
+        self.assertEqual(filters.get("company"), "PT Sopwer")
+
+    def test_list_documents_no_company_filter_when_none(self):
+        p = ERPNextProvider()
+        with patch("frappe.get_all", return_value=[]) as ga:
+            p.list_documents("Sales Invoice", "CUST-1")
+        call_kwargs = ga.call_args
+        filters = call_kwargs[1].get("filters") or call_kwargs[0][1]
+        self.assertNotIn("company", filters)

@@ -9,6 +9,7 @@ guarded by the configured CRM provider and never required (CLAUDE.md §7, anti-p
 import frappe
 
 from sopwer_inbox.crm.registry import get_provider
+from sopwer_inbox.scope import conversation_company
 
 
 @frappe.whitelist()
@@ -20,6 +21,7 @@ def get_contact_context(contact=None, conversation=None):
 		return {"contact": None, "previous_conversations": [], "erp": None}
 
 	contact_doc = frappe.get_doc("Contact", contact)
+	company = conversation_company(conversation)
 	return {
 		"contact": {
 			"name": contact_doc.name,
@@ -29,7 +31,7 @@ def get_contact_context(contact=None, conversation=None):
 			"inbox_notes": contact_doc.get("inbox_notes"),
 		},
 		"previous_conversations": _previous_conversations(contact),
-		"erp": _provider_context(contact_doc.name),
+		"erp": _provider_context(contact_doc.name, company),
 	}
 
 
@@ -51,12 +53,12 @@ def _previous_conversations(contact):
 	)
 
 
-def _provider_context(contact_name):
+def _provider_context(contact_name, company=None):
 	provider = get_provider()
 	if not provider:
 		return None
 	try:
-		return provider.get_contact_context(contact_name)
+		return provider.get_contact_context(contact_name, company)
 	except Exception:
 		frappe.log_error(title="Sopwer Inbox CRM context failed", message=frappe.get_traceback())
 		return None
