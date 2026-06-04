@@ -232,7 +232,7 @@ export function ContactPanel({
     setAddingTag(false);
   }
 
-  const erpDocs = erp ? [...erp.sales_orders, ...erp.invoices] : [];
+  const erpDocs = erp ? [...(erp.sales_orders || []), ...(erp.invoices || [])] : [];
 
   return (
     <aside className="cpanel">
@@ -383,7 +383,7 @@ export function ContactPanel({
               </span>
             </div>
             {erpDocs.map((o) => {
-              const isInvoice = o.name.toLowerCase().includes("inv") || erp.invoices.includes(o);
+              const isInvoice = o.name.toLowerCase().includes("inv") || (erp.invoices || []).includes(o);
               const paid = (o.status || "").toLowerCase().includes("paid");
               return (
                 <div className="erp-card" key={o.name}>

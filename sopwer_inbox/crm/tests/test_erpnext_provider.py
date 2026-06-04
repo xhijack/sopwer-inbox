@@ -19,12 +19,14 @@ class TestERPNextProvider(InboxTestCase):
 		p = ERPNextProvider()
 		with patch.object(p, "is_available", return_value=True), patch.object(
 			p, "_linked_customer", return_value="CUST-0001"
-		), patch.object(p, "_recent_documents", return_value=[{"name": "SO-1", "grand_total": 100}]), patch(
+		), patch.object(p, "_docs", return_value=[{"name": "SO-1", "grand_total": 100}]), patch(
 			"frappe.db.get_value", return_value=None
 		):
 			ctx = p.get_contact_context(contact.name)
 		self.assertEqual(ctx["customer"], "CUST-0001")
-		self.assertEqual(ctx["recent_documents"][0]["name"], "SO-1")
+		# Frontend expects split sales_orders / invoices (not recent_documents).
+		self.assertEqual(ctx["sales_orders"][0]["name"], "SO-1")
+		self.assertIn("invoices", ctx)
 
 
 class TestERPNextDocuments(InboxTestCase):

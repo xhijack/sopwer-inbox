@@ -4,7 +4,13 @@ import frappe
 
 from sopwer_inbox.crm.base import BaseCRMProvider
 
-_DOC_FIELDS = {
+# Contact-panel cards: native date fields (the frontend reads transaction_date / posting_date).
+_CONTEXT_FIELDS = {
+	"Sales Order": ["name", "grand_total", "status", "transaction_date", "currency"],
+	"Sales Invoice": ["name", "grand_total", "status", "posting_date", "currency"],
+}
+# Document picker: date aliased to a common `date` key (the picker reads `date`).
+_LIST_FIELDS = {
 	"Sales Order": ["name", "grand_total", "status", "transaction_date as date", "currency"],
 	"Sales Invoice": ["name", "grand_total", "status", "posting_date as date", "currency"],
 	"Quotation": ["name", "grand_total", "status", "transaction_date as date", "currency"],
@@ -24,7 +30,8 @@ class ERPNextProvider(BaseCRMProvider):
 		return {
 			"customer": customer,
 			"customer_since": frappe.db.get_value("Customer", customer, "creation"),
-			"recent_documents": self._recent_documents(customer),
+			"sales_orders": self._docs("Sales Order", customer),
+			"invoices": self._docs("Sales Invoice", customer),
 		}
 
 	def linked_customer(self, contact: str):
@@ -38,23 +45,18 @@ class ERPNextProvider(BaseCRMProvider):
 				return link.link_name
 		return None
 
-	def _recent_documents(self, customer: str):
-		out = []
-		for dt in ("Sales Order", "Sales Invoice"):
-			try:
-				rows = frappe.get_all(
-					dt,
-					filters={"customer": customer, "docstatus": ["<", 2]},
-					fields=_DOC_FIELDS[dt],
-					order_by="modified desc",
-					limit=3,
-				)
-				for r in rows:
-					r["doctype"] = dt
-				out.extend(rows)
-			except Exception:
-				continue
-		return out
+	def _docs(self, doctype: str, customer: str, limit: int = 3) -> list:
+		"""Recent documents of one type for a customer (panel cards)."""
+		try:
+			return frappe.get_all(
+				doctype,
+				filters={"customer": customer, "docstatus": ["<", 2]},
+				fields=_CONTEXT_FIELDS[doctype],
+				order_by="modified desc",
+				limit=limit,
+			)
+		except Exception:
+			return []
 
 	def allowed_send_doctypes(self) -> list[str]:
 		settings = frappe.get_cached_doc("Inbox CRM Settings")
@@ -68,7 +70,7 @@ class ERPNextProvider(BaseCRMProvider):
 			filters["customer"] = customer
 		if q:
 			filters["name"] = ["like", f"%{q}%"]
-		fields = _DOC_FIELDS.get(doctype, ["name", "grand_total", "status"])
+		fields = _LIST_FIELDS.get(doctype, ["name", "grand_total", "status"])
 		return frappe.get_all(doctype, filters=filters, fields=fields, order_by="modified desc", limit=20)
 
 	def get_document_pdf(self, doctype: str, name: str, print_format: str | None = None) -> bytes:
