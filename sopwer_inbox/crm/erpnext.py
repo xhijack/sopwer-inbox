@@ -75,7 +75,15 @@ class ERPNextProvider(BaseCRMProvider):
 
 	def get_document_pdf(self, doctype: str, name: str, print_format: str | None = None) -> bytes:
 		pf = print_format or frappe.db.get_single_value("Inbox CRM Settings", "print_format") or None
-		return frappe.get_print(doctype, name, print_format=pf, as_pdf=True)
+		# The inbox already authorises the send (inbox role + customer-match guard in
+		# api.document.send_document), so render the PDF without requiring the agent to
+		# hold ERPNext 'print' permission on the source doctype.
+		original = frappe.flags.ignore_print_permissions
+		frappe.flags.ignore_print_permissions = True
+		try:
+			return frappe.get_print(doctype, name, print_format=pf, as_pdf=True)
+		finally:
+			frappe.flags.ignore_print_permissions = original
 
 	def search_customers(self, q: str, limit: int = 10) -> list:
 		rows = frappe.get_all(

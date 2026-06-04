@@ -49,6 +49,21 @@ class TestERPNextPdf(InboxTestCase):
 		self.assertEqual(data, b"%PDF-1.4 fake")
 		gp.assert_called_once()
 
+	def test_get_document_pdf_bypasses_print_permission_then_restores(self):
+		"""The render runs with ignore_print_permissions set, restored afterwards."""
+		seen = {}
+
+		def fake_print(*args, **kwargs):
+			seen["flag"] = frappe.flags.ignore_print_permissions
+			return b"%PDF-1.4 fake"
+
+		frappe.flags.ignore_print_permissions = False
+		with patch("frappe.get_print", side_effect=fake_print):
+			ERPNextProvider().get_document_pdf("Sales Invoice", "INV-1")
+		# Active during the call, restored to the original value after.
+		self.assertTrue(seen["flag"])
+		self.assertFalse(frappe.flags.ignore_print_permissions)
+
 
 class TestERPNextLinkedCustomer(InboxTestCase):
 	"""linked_customer (public) delegates to _linked_customer (private)."""
