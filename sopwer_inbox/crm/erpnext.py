@@ -51,3 +51,18 @@ class ERPNextProvider(BaseCRMProvider):
 			except Exception:
 				continue
 		return out
+
+	def allowed_send_doctypes(self) -> list[str]:
+		settings = frappe.get_cached_doc("Inbox CRM Settings")
+		return [d.document_type for d in settings.get("sendable_doctypes", [])]
+
+	def list_documents(self, doctype: str, customer: str | None, q: str = "") -> list[dict]:
+		if doctype not in self.allowed_send_doctypes():
+			frappe.throw(frappe._("Document type {0} is not enabled for sending.").format(doctype))
+		filters = {"docstatus": ["<", 2]}
+		if customer:
+			filters["customer"] = customer
+		if q:
+			filters["name"] = ["like", f"%{q}%"]
+		fields = _DOC_FIELDS.get(doctype, ["name", "grand_total", "status"])
+		return frappe.get_all(doctype, filters=filters, fields=fields, order_by="modified desc", limit=20)

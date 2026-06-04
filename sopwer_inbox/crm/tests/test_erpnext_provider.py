@@ -1,3 +1,4 @@
+import frappe
 from unittest.mock import patch
 
 from sopwer_inbox.crm.erpnext import ERPNextProvider
@@ -24,3 +25,16 @@ class TestERPNextProvider(InboxTestCase):
 			ctx = p.get_contact_context(contact.name)
 		self.assertEqual(ctx["customer"], "CUST-0001")
 		self.assertEqual(ctx["recent_documents"][0]["name"], "SO-1")
+
+
+class TestERPNextDocuments(InboxTestCase):
+	def setUp(self):
+		frappe.db.set_single_value("Inbox CRM Settings", "provider", "ERPNext")
+		s = frappe.get_doc("Inbox CRM Settings")
+		s.set("sendable_doctypes", [])
+		s.append("sendable_doctypes", {"document_type": "Sales Invoice"})
+		s.flags.ignore_links = True
+		s.save(ignore_permissions=True)
+
+	def test_allowed_doctypes_from_settings(self):
+		self.assertEqual(ERPNextProvider().allowed_send_doctypes(), ["Sales Invoice"])
