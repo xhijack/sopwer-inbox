@@ -82,3 +82,40 @@ class TestDocumentApi(InboxTestCase):
 			doc_api.send_document(self.conv.name, "Sales Invoice", "INV-1")
 		self.assertTrue(sent["media_path"])
 		self.assertEqual(sent["type"], "File")
+
+	# ------------------------------------------------------------------
+	# get_send_config
+	# ------------------------------------------------------------------
+
+	def test_send_config_disabled_when_no_provider(self):
+		"""Returns enabled=False and empty doctypes when provider is None."""
+		frappe.db.set_single_value("Inbox CRM Settings", "provider", "None")
+		result = doc_api.get_send_config()
+		self.assertEqual(result, {"enabled": False, "doctypes": []})
+
+	def test_send_config_returns_doctypes_when_permitted(self):
+		"""Administrator (has System Manager) gets enabled=True and the provider doctypes."""
+		fake = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+		})()
+		with patch.object(doc_api, "get_provider", return_value=fake):
+			result = doc_api.get_send_config()
+		self.assertTrue(result["enabled"])
+		self.assertEqual(result["doctypes"], ["Sales Invoice"])
+
+	def test_send_config_hides_doctypes_when_not_permitted(self):
+		"""User without System Manager or allowed roles gets enabled=False and empty doctypes."""
+		fake = type("P", (), {
+			"allowed_send_doctypes": lambda self: ["Sales Invoice"],
+		})()
+		# Ensure document_send_roles is empty so the default {"Inbox Manager"} applies.
+		settings = frappe.get_cached_doc("Inbox CRM Settings")
+		settings.document_send_roles = []
+		# Patch get_provider so it returns our fake, and patch get_roles to
+		# return only "Inbox Agent" (no System Manager, no Inbox Manager).
+		with patch.object(doc_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Inbox Agent"]), \
+				patch("frappe.get_cached_doc", return_value=settings):
+			result = doc_api.get_send_config()
+		self.assertFalse(result["enabled"])
+		self.assertEqual(result["doctypes"], [])
