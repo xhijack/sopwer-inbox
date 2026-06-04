@@ -90,7 +90,14 @@ function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockP
 
   return (
     <div className="cp-sec cp-link-customer">
-      <div className="lbl">Hubungkan ke Customer</div>
+      <div className="lbl">
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <Ic.UserCheck size={12} /> Hubungkan ke Customer
+        </span>
+      </div>
+      <p className="clc-hint">
+        Kaitkan kontak ini ke Customer ERPNext untuk melihat order/invoice & mengirim dokumen.
+      </p>
 
       {suggestions.length > 0 && (
         <div className="clc-suggestions">
@@ -140,7 +147,7 @@ function LinkCustomerBlock({ convId, contactName, onLinked }: LinkCustomerBlockP
       </div>
 
       <button
-        className="btn btn-sm btn-ghost clc-create-btn"
+        className="btn btn-sm btn-outline clc-create-btn"
         disabled={creating}
         onClick={doCreate}
       >
