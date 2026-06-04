@@ -30,6 +30,7 @@ def _require_inbox_role():
 def customer_options(conversation):
 	"""Return the currently linked Customer and suggestions for the conversation's contact."""
 	provider = _require_provider()
+	_require_inbox_role()
 	contact = _contact_of(conversation)
 	return {
 		"linked": provider.linked_customer(contact) if contact else None,
@@ -61,6 +62,7 @@ def link_customer(conversation, customer):
 def create_and_link_customer(conversation, customer_name):
 	"""Create a new Customer named *customer_name* and link it to the conversation's contact."""
 	provider = _require_provider()
+	_require_inbox_role()
 	if not frappe.has_permission("Customer", "create"):
 		frappe.throw(_("Not allowed to create Customer"), frappe.PermissionError)
 	contact = _contact_of(conversation)

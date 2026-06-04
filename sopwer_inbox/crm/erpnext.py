@@ -120,6 +120,8 @@ class ERPNextProvider(BaseCRMProvider):
 			return []
 
 	def link_customer(self, contact: str, customer: str) -> None:
+		if not frappe.db.exists("Customer", customer):
+			frappe.throw(frappe._("Customer {0} not found").format(customer))
 		contact_doc = frappe.get_doc("Contact", contact)
 		for link in contact_doc.get("links", []):
 			if link.link_doctype == "Customer" and link.link_name == customer:

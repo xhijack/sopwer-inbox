@@ -59,6 +59,13 @@ class TestCustomerOptions(InboxTestCase):
 		fake.linked_customer.assert_not_called()
 		fake.suggest_customers_for_contact.assert_not_called()
 
+	def test_customer_options_requires_inbox_role(self):
+		fake = MagicMock()
+		with patch.object(crm_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Guest"]):
+			with self.assertRaises(frappe.PermissionError):
+				crm_api.customer_options(self.conv.name)
+
 
 class TestSearchCustomers(InboxTestCase):
 	"""search_customers requires inbox role and proxies the provider."""
@@ -187,3 +194,11 @@ class TestCreateAndLinkCustomer(InboxTestCase):
 		fake.create_and_link_customer.assert_called_once_with(self.contact.name, "New Corp")
 		self.assertTrue(result["ok"])
 		self.assertEqual(result["customer"], "CUST-9")
+
+	def test_create_customer_requires_inbox_role(self):
+		fake = MagicMock()
+		with patch.object(crm_api, "get_provider", return_value=fake), \
+				patch("frappe.get_roles", return_value=["Accounts User"]), \
+				patch("frappe.has_permission", return_value=True):
+			with self.assertRaises(frappe.PermissionError):
+				crm_api.create_and_link_customer(self.conv.name, "New Corp")
