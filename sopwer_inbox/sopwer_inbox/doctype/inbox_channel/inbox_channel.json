@@ -110,7 +110,8 @@
    "description": "Long-lived Page Access Token. Encrypted at rest.",
    "fieldname": "meta_page_access_token",
    "fieldtype": "Password",
-   "label": "Page Access Token"
+   "label": "Page Access Token",
+   "length": 500
   },
   {
    "description": "App Secret for X-Hub-Signature-256 verification. Encrypted at rest.",
