@@ -288,6 +288,10 @@ def register_meta_webhook(channel):
 	obj = "instagram" if ch.channel_type == "Instagram" else "page"
 	fields = "messages,messaging_postbacks" if obj == "page" else "messages"
 	callback = frappe.utils.get_url("/api/method/sopwer_inbox.api.webhooks.meta")
+	# Meta rejects non-HTTPS callbacks; get_url() can return http:// when the
+	# site's host_name is not configured with a scheme. Force HTTPS.
+	if callback.startswith("http://"):
+		callback = "https://" + callback[len("http://"):]
 	base = f"https://graph.facebook.com/{version}"
 
 	# 1) App-level webhook subscription (Meta verifies the callback URL right now,

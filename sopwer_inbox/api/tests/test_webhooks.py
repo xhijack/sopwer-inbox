@@ -65,6 +65,10 @@ class TestRegisterMetaWebhook(InboxTestCase):
 		self.assertEqual(post.call_count, 2)  # subscriptions + subscribed_apps
 		self.assertIn("/111/subscriptions", post.call_args_list[0].args[0])
 		self.assertIn("/999/subscribed_apps", post.call_args_list[1].args[0])
+		# Meta requires an HTTPS callback — never register an http:// URL.
+		self.assertTrue(res["callback_url"].startswith("https://"))
+		sub_data = post.call_args_list[0].kwargs["data"]
+		self.assertTrue(sub_data["callback_url"].startswith("https://"))
 
 	def test_instagram_uses_instagram_object(self):
 		ch = self._meta_channel("WH IG", "Instagram", meta_page_id="ig999")
