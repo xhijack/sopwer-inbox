@@ -40,7 +40,7 @@ export function DocumentPicker({
           </div>
           <div>
             <h2>Kirim Dokumen</h2>
-            <p>Pilih dokumen pelanggan untuk dikirim ke percakapan ini.</p>
+            <p>Pilih dokumen pelanggan untuk dikirim.</p>
           </div>
           <button className="x" onClick={onClose} title="Tutup">
             <Ic.X size={16} />

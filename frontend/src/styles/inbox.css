@@ -696,6 +696,14 @@ body {
 .doc-search > svg { position: absolute; left: 10px; color: var(--fg-3); pointer-events: none; }
 .doc-search input { width: 100%; font-family: var(--font-body); font-size: 13px; padding: 8px 10px 8px 30px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--sw-paper); color: var(--fg-1); outline: none; }
 .doc-search input:focus { border-color: var(--pri); box-shadow: var(--sh-focus); background: #fff; }
+/* Document picker: tighter, balanced header + controls */
+.doc-picker { max-width: 460px; }
+.doc-picker .sheet-head { padding: 16px 18px 14px; align-items: center; gap: 11px; }
+.doc-picker .sheet-head .ic { width: 34px; height: 34px; border-radius: 9px; }
+.doc-picker .sheet-head h2 { font-size: 16.5px; }
+.doc-picker .sheet-head p { margin-top: 1px; font-size: 12px; }
+.doc-picker .doc-controls { padding: 12px 18px; }
+.doc-picker .doc-controls select { min-width: 144px; }
 .doc-error { display: flex; align-items: flex-start; gap: 8px; margin: 0 16px 4px; padding: 9px 11px; border: 1px solid var(--sw-red-200, #fecaca); background: var(--sw-red-50, #fef2f2); color: var(--sw-red-700, #b91c1c); border-radius: 8px; font-size: 12.5px; line-height: 1.4; }
 .doc-error > svg { flex-shrink: 0; margin-top: 1px; }
 .doc-sending { display: flex; align-items: center; gap: 8px; margin: 0 16px 4px; padding: 9px 11px; color: var(--fg-2); font-size: 12.5px; }
