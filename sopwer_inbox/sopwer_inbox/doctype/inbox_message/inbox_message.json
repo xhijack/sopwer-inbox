@@ -95,7 +95,8 @@
    "description": "Message id at the source channel. Used for inbound deduplication.",
    "fieldname": "external_message_id",
    "fieldtype": "Data",
-   "label": "External Message ID"
+   "label": "External Message ID",
+   "length": 500
   },
   {
    "default": "Pending",
