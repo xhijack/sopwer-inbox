@@ -221,6 +221,18 @@ def meta():
 					channel_doc.name,
 					frappe.get_traceback(),
 				)
+				# Also surface in the Error Log UI with the raw event, so the exact
+				# inbound shape (which differs Messenger vs Instagram) is debuggable.
+				try:
+					frappe.log_error(
+						title="Meta inbound event failed",
+						message="object={0} channel={1}\nevent={2}\n\n{3}".format(
+							object_type, channel_doc.name,
+							json.dumps(event)[:3000], frappe.get_traceback(),
+						),
+					)
+				except Exception:
+					pass
 
 	return {"ok": True}
 
