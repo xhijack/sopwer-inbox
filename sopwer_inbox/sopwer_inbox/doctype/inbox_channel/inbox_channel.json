@@ -19,6 +19,7 @@
   "wuzapi_instance",
   "meta_section",
   "meta_page_id",
+  "meta_app_id",
   "meta_page_access_token",
   "meta_app_secret",
   "meta_verify_token",
@@ -105,6 +106,12 @@
    "fieldname": "meta_page_id",
    "fieldtype": "Data",
    "label": "Page ID / IG User ID"
+  },
+  {
+   "description": "Meta App ID (App Dashboard → Settings → Basic). Needed for the one-click webhook registration.",
+   "fieldname": "meta_app_id",
+   "fieldtype": "Data",
+   "label": "App ID"
   },
   {
    "description": "Long-lived Page Access Token. Encrypted at rest.",

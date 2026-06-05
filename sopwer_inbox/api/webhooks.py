@@ -247,3 +247,71 @@ def register_telegram_webhook(channel, base_url):
 
 	resp = requests.post(f"{API_BASE}/bot{token}/setWebhook", json=body, timeout=TIMEOUT)
 	return resp.json()
+
+
+@frappe.whitelist()
+def register_meta_webhook(channel):
+	"""One-click: register this app's Meta webhook + subscribe the Page/IG account.
+
+	Uses the channel's stored credentials (App ID/Secret, Page token, verify token)
+	so the admin never touches the Meta dashboard webhook UI. Requires write
+	permission on Inbox Channel.
+	"""
+	import requests
+
+	if not frappe.has_permission("Inbox Channel", "write"):
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+
+	ch = frappe.get_doc("Inbox Channel", channel)
+	if ch.channel_type not in ("Facebook Messenger", "Instagram"):
+		frappe.throw(_("Channel {0} is not a Meta channel.").format(channel))
+
+	app_id = (ch.get("meta_app_id") or "").strip()
+	page_id = (ch.get("meta_page_id") or "").strip()
+	verify_token = (ch.get("meta_verify_token") or "").strip()
+	version = (ch.get("meta_api_version") or "v21.0").strip()
+	app_secret = ch.get_password("meta_app_secret", raise_exception=False)
+	page_token = ch.get_password("meta_page_access_token", raise_exception=False)
+
+	missing = [
+		lbl for lbl, val in [
+			("App ID", app_id), ("App Secret", app_secret), ("Page ID", page_id),
+			("Verify Token", verify_token), ("Page Access Token", page_token),
+		] if not val
+	]
+	if missing:
+		frappe.throw(_("Lengkapi dulu field berikut: {0}").format(", ".join(missing)))
+
+	obj = "instagram" if ch.channel_type == "Instagram" else "page"
+	fields = "messages,messaging_postbacks" if obj == "page" else "messages"
+	callback = frappe.utils.get_url("/api/method/sopwer_inbox.api.webhooks.meta")
+	base = f"https://graph.facebook.com/{version}"
+
+	# 1) App-level webhook subscription (Meta verifies the callback URL right now,
+	#    hitting our GET handler which echoes the challenge for a matching token).
+	subscription = requests.post(
+		f"{base}/{app_id}/subscriptions",
+		data={
+			"object": obj,
+			"callback_url": callback,
+			"verify_token": verify_token,
+			"fields": fields,
+			"access_token": f"{app_id}|{app_secret}",
+		},
+		timeout=TIMEOUT,
+	).json()
+
+	# 2) Subscribe the Page / IG account to this app so its events are delivered.
+	subscribed_app = requests.post(
+		f"{base}/{page_id}/subscribed_apps",
+		data={"subscribed_fields": fields, "access_token": page_token},
+		timeout=TIMEOUT,
+	).json()
+
+	return {
+		"ok": bool(subscription.get("success")) and bool(subscribed_app.get("success")),
+		"callback_url": callback,
+		"object": obj,
+		"subscription": subscription,
+		"subscribed_app": subscribed_app,
+	}
