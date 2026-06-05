@@ -20,6 +20,8 @@
   "meta_section",
   "meta_page_id",
   "meta_ig_account_id",
+  "meta_phone_number_id",
+  "meta_waba_id",
   "meta_app_id",
   "meta_page_access_token",
   "meta_app_secret",
@@ -44,7 +46,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Channel Type",
-   "options": "Telegram\nWhatsApp\nFacebook Messenger\nInstagram",
+   "options": "Telegram\nWhatsApp\nFacebook Messenger\nInstagram\nWhatsApp Cloud",
    "reqd": 1
   },
   {
@@ -100,7 +102,7 @@
    "fieldname": "meta_section",
    "fieldtype": "Section Break",
    "label": "Meta",
-   "depends_on": "eval:doc.channel_type==\"Facebook Messenger\"||doc.channel_type==\"Instagram\""
+   "depends_on": "eval:doc.channel_type==\"Facebook Messenger\"||doc.channel_type==\"Instagram\"||doc.channel_type==\"WhatsApp Cloud\""
   },
   {
    "description": "Facebook Page ID. Used to SEND messages and SUBSCRIBE the webhook — for both Messenger and Instagram (Instagram DMs are sent via the linked Page).",
@@ -114,6 +116,20 @@
    "fieldname": "meta_ig_account_id",
    "fieldtype": "Data",
    "label": "IG Account ID"
+  },
+  {
+   "depends_on": "eval:doc.channel_type==\"WhatsApp Cloud\"",
+   "description": "Cloud API Phone Number ID. Used as the send target and inbound routing key (value.metadata.phone_number_id).",
+   "fieldname": "meta_phone_number_id",
+   "fieldtype": "Data",
+   "label": "WA Phone Number ID"
+  },
+  {
+   "depends_on": "eval:doc.channel_type==\"WhatsApp Cloud\"",
+   "description": "WhatsApp Business Account ID. Used to subscribe the WABA to this app.",
+   "fieldname": "meta_waba_id",
+   "fieldtype": "Data",
+   "label": "WhatsApp Business Account ID"
   },
   {
    "description": "Meta App ID (App Dashboard → Settings → Basic). Needed for the one-click webhook registration.",

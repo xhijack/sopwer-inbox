@@ -1,0 +1,27 @@
+{
+  "messaging_product": "whatsapp",
+  "metadata": {
+    "display_phone_number": "6281200000000",
+    "phone_number_id": "PHONE_NUM_ID_123"
+  },
+  "contacts": [
+    {
+      "profile": { "name": "Siti Cloud" },
+      "wa_id": "628111222333"
+    }
+  ],
+  "messages": [
+    {
+      "from": "628111222333",
+      "id": "wamid.img001",
+      "timestamp": "1749081600",
+      "type": "image",
+      "image": {
+        "id": "media-id-abc",
+        "mime_type": "image/jpeg",
+        "sha256": "abc123",
+        "caption": "Foto produk"
+      }
+    }
+  ]
+}

@@ -11,12 +11,14 @@ def _adapter_map():
 	from sopwer_inbox.channels.telegram import TelegramAdapter
 	from sopwer_inbox.channels.whatsapp import WhatsAppAdapter
 	from sopwer_inbox.channels.meta import MessengerAdapter, InstagramAdapter
+	from sopwer_inbox.channels.whatsapp_cloud import WhatsAppCloudAdapter
 
 	return {
 		"Telegram": TelegramAdapter,
 		"WhatsApp": WhatsAppAdapter,
 		"Facebook Messenger": MessengerAdapter,
 		"Instagram": InstagramAdapter,
+		"WhatsApp Cloud": WhatsAppCloudAdapter,
 	}
 
 

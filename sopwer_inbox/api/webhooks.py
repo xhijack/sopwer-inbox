@@ -99,6 +99,7 @@ def telegram(channel=None, debug=None):
 _OBJECT_TO_CHANNEL_TYPE = {
 	"page": "Facebook Messenger",
 	"instagram": "Instagram",
+	"whatsapp_business_account": "WhatsApp Cloud",
 }
 
 
@@ -137,6 +138,23 @@ def _match_meta_channel(object_type: str, entry_id: str):
 	return frappe.get_doc("Inbox Channel", results[0]["name"])
 
 
+def _match_wa_channel(phone_number_id: str):
+	"""Resolve a WA Cloud phone_number_id to an Inbox Channel doc or None."""
+	results = frappe.get_all(
+		"Inbox Channel",
+		filters={
+			"meta_phone_number_id": phone_number_id,
+			"channel_type": "WhatsApp Cloud",
+			"enabled": 1,
+		},
+		fields=["name"],
+		limit=1,
+	)
+	if not results:
+		return None
+	return frappe.get_doc("Inbox Channel", results[0]["name"])
+
+
 @frappe.whitelist(allow_guest=True, methods=["GET", "POST"])
 def meta():
 	"""Meta (Facebook Messenger + Instagram) webhook endpoint.
@@ -161,7 +179,10 @@ def meta():
 			# Find any enabled Meta channel whose meta_verify_token matches.
 			channels = frappe.get_all(
 				"Inbox Channel",
-				filters={"channel_type": ["in", ["Facebook Messenger", "Instagram"]], "enabled": 1},
+				filters={
+					"channel_type": ["in", ["Facebook Messenger", "Instagram", "WhatsApp Cloud"]],
+					"enabled": 1,
+				},
 				fields=["name", "meta_verify_token"],
 			)
 			for ch in channels:
@@ -187,52 +208,110 @@ def meta():
 
 	for entry in payload.get("entry", []):
 		entry_id = entry.get("id")
-		channel_doc = _match_meta_channel(object_type, entry_id)
-		if not channel_doc:
-			log.warning("meta POST: no channel for object=%r entry_id=%r — skipping", object_type, entry_id)
-			continue
 
-		# Verify signature per matched channel
-		app_secret = channel_doc.get_password("meta_app_secret", raise_exception=False) or ""
-		sig_header = (req.headers.get("X-Hub-Signature-256") or "") if req else ""
-
-		if not app_secret:
-			log.warning(
-				"meta POST: meta_app_secret empty on channel %r — skipping entry for security",
-				channel_doc.name,
-			)
-			continue
-
-		if not _verify_meta_signature(raw, sig_header, app_secret):
-			log.warning(
-				"meta POST: invalid signature for channel %r — skipping entry",
-				channel_doc.name,
-			)
-			continue
-
-		adapter = get_adapter(channel_doc)
-		for event in entry.get("messaging", []):
-			try:
-				for norm in adapter.parse_inbound(event):
-					ingest_inbound(norm, channel_doc)
-			except Exception:
-				log.error(
-					"meta POST: error processing event for channel=%r\n%s",
-					channel_doc.name,
-					frappe.get_traceback(),
-				)
-				# Also surface in the Error Log UI with the raw event, so the exact
-				# inbound shape (which differs Messenger vs Instagram) is debuggable.
-				try:
-					frappe.log_error(
-						title="Meta inbound event failed",
-						message="object={0} channel={1}\nevent={2}\n\n{3}".format(
-							object_type, channel_doc.name,
-							json.dumps(event)[:3000], frappe.get_traceback(),
-						),
+		if object_type == "whatsapp_business_account":
+			# WhatsApp Cloud: route by phone_number_id inside each change.
+			sig_header = (req.headers.get("X-Hub-Signature-256") or "") if req else ""
+			for change in entry.get("changes", []):
+				if change.get("field") != "messages":
+					continue
+				value = change.get("value") or {}
+				phone_id = (value.get("metadata") or {}).get("phone_number_id")
+				if not phone_id:
+					log.warning(
+						"meta POST (WA Cloud): no phone_number_id in change metadata — skipping"
 					)
+					continue
+				channel_doc = _match_wa_channel(phone_id)
+				if not channel_doc:
+					log.warning(
+						"meta POST (WA Cloud): no channel for phone_number_id=%r — skipping", phone_id
+					)
+					continue
+				# Verify signature with this channel's app_secret
+				app_secret = channel_doc.get_password("meta_app_secret", raise_exception=False) or ""
+				if not app_secret:
+					log.warning(
+						"meta POST (WA Cloud): meta_app_secret empty on channel %r — skipping",
+						channel_doc.name,
+					)
+					continue
+				if not _verify_meta_signature(raw, sig_header, app_secret):
+					log.warning(
+						"meta POST (WA Cloud): invalid signature for channel %r — skipping",
+						channel_doc.name,
+					)
+					continue
+				adapter = get_adapter(channel_doc)
+				try:
+					for norm in adapter.parse_inbound(value):
+						ingest_inbound(norm, channel_doc)
 				except Exception:
-					pass
+					log.error(
+						"meta POST (WA Cloud): error for channel=%r\n%s",
+						channel_doc.name,
+						frappe.get_traceback(),
+					)
+					try:
+						frappe.log_error(
+							title="Meta inbound event failed",
+							message="object={0} channel={1}\nvalue={2}\n\n{3}".format(
+								object_type, channel_doc.name,
+								json.dumps(value)[:3000], frappe.get_traceback(),
+							),
+						)
+					except Exception:
+						pass
+		else:
+			# Messenger / Instagram path — route by entry.id
+			channel_doc = _match_meta_channel(object_type, entry_id)
+			if not channel_doc:
+				log.warning(
+					"meta POST: no channel for object=%r entry_id=%r — skipping", object_type, entry_id
+				)
+				continue
+
+			# Verify signature per matched channel
+			app_secret = channel_doc.get_password("meta_app_secret", raise_exception=False) or ""
+			sig_header = (req.headers.get("X-Hub-Signature-256") or "") if req else ""
+
+			if not app_secret:
+				log.warning(
+					"meta POST: meta_app_secret empty on channel %r — skipping entry for security",
+					channel_doc.name,
+				)
+				continue
+
+			if not _verify_meta_signature(raw, sig_header, app_secret):
+				log.warning(
+					"meta POST: invalid signature for channel %r — skipping entry",
+					channel_doc.name,
+				)
+				continue
+
+			adapter = get_adapter(channel_doc)
+			for event in entry.get("messaging", []):
+				try:
+					for norm in adapter.parse_inbound(event):
+						ingest_inbound(norm, channel_doc)
+				except Exception:
+					log.error(
+						"meta POST: error processing event for channel=%r\n%s",
+						channel_doc.name,
+						frappe.get_traceback(),
+					)
+					# Also surface in the Error Log UI with the raw event, so the exact
+					# inbound shape (which differs Messenger vs Instagram) is debuggable.
+					try:
+						frappe.log_error(
+							title="Meta inbound event failed",
+							message="object={0} channel={1}\nevent={2}\n\n{3}".format(
+								object_type, channel_doc.name,
+								json.dumps(event)[:3000], frappe.get_traceback(),
+							),
+						)
+					except Exception:
+						pass
 
 	return {"ok": True}
 
@@ -266,11 +345,13 @@ def register_telegram_webhook(channel, base_url):
 
 @frappe.whitelist()
 def register_meta_webhook(channel):
-	"""One-click: register this app's Meta webhook + subscribe the Page/IG account.
+	"""One-click: register this app's Meta webhook + subscribe the Page/IG/WABA.
 
 	Uses the channel's stored credentials (App ID/Secret, Page token, verify token)
 	so the admin never touches the Meta dashboard webhook UI. Requires write
 	permission on Inbox Channel.
+
+	Supports: Facebook Messenger, Instagram, and WhatsApp Cloud.
 	"""
 	import requests
 
@@ -278,20 +359,72 @@ def register_meta_webhook(channel):
 		frappe.throw(_("Not permitted."), frappe.PermissionError)
 
 	ch = frappe.get_doc("Inbox Channel", channel)
-	if ch.channel_type not in ("Facebook Messenger", "Instagram"):
+	if ch.channel_type not in ("Facebook Messenger", "Instagram", "WhatsApp Cloud"):
 		frappe.throw(_("Channel {0} is not a Meta channel.").format(channel))
 
 	app_id = (ch.get("meta_app_id") or "").strip()
-	page_id = (ch.get("meta_page_id") or "").strip()
 	verify_token = (ch.get("meta_verify_token") or "").strip()
 	version = (ch.get("meta_api_version") or "v21.0").strip()
 	app_secret = ch.get_password("meta_app_secret", raise_exception=False)
-	page_token = ch.get_password("meta_page_access_token", raise_exception=False)
+	token = ch.get_password("meta_page_access_token", raise_exception=False)
 
+	callback = frappe.utils.get_url("/api/method/sopwer_inbox.api.webhooks.meta")
+	# Meta rejects non-HTTPS callbacks; get_url() can return http:// when the
+	# site's host_name is not configured with a scheme. Force HTTPS.
+	if callback.startswith("http://"):
+		callback = "https://" + callback[len("http://"):]
+	base = f"https://graph.facebook.com/{version}"
+
+	if ch.channel_type == "WhatsApp Cloud":
+		phone_number_id = (ch.get("meta_phone_number_id") or "").strip()
+		waba_id = (ch.get("meta_waba_id") or "").strip()
+		missing = [
+			lbl for lbl, val in [
+				("App ID", app_id), ("App Secret", app_secret),
+				("WA Phone Number ID", phone_number_id), ("WhatsApp Business Account ID", waba_id),
+				("Verify Token", verify_token), ("Page Access Token (WA token)", token),
+			] if not val
+		]
+		if missing:
+			frappe.throw(_("Lengkapi dulu field berikut: {0}").format(", ".join(missing)))
+
+		obj = "whatsapp_business_account"
+		fields = "messages"
+
+		# 1) App-level webhook subscription
+		subscription = requests.post(
+			f"{base}/{app_id}/subscriptions",
+			data={
+				"object": obj,
+				"callback_url": callback,
+				"verify_token": verify_token,
+				"fields": fields,
+				"access_token": f"{app_id}|{app_secret}",
+			},
+			timeout=TIMEOUT,
+		).json()
+
+		# 2) Subscribe the WABA to this app
+		subscribed_app = requests.post(
+			f"{base}/{waba_id}/subscribed_apps",
+			params={"access_token": token},
+			timeout=TIMEOUT,
+		).json()
+
+		return {
+			"ok": bool(subscription.get("success")) and bool(subscribed_app.get("success")),
+			"callback_url": callback,
+			"object": obj,
+			"subscription": subscription,
+			"subscribed_app": subscribed_app,
+		}
+
+	# Messenger / Instagram path
+	page_id = (ch.get("meta_page_id") or "").strip()
 	missing = [
 		lbl for lbl, val in [
 			("App ID", app_id), ("App Secret", app_secret), ("Page ID", page_id),
-			("Verify Token", verify_token), ("Page Access Token", page_token),
+			("Verify Token", verify_token), ("Page Access Token", token),
 		] if not val
 	]
 	if missing:
@@ -299,12 +432,6 @@ def register_meta_webhook(channel):
 
 	obj = "instagram" if ch.channel_type == "Instagram" else "page"
 	fields = "messages,messaging_postbacks" if obj == "page" else "messages"
-	callback = frappe.utils.get_url("/api/method/sopwer_inbox.api.webhooks.meta")
-	# Meta rejects non-HTTPS callbacks; get_url() can return http:// when the
-	# site's host_name is not configured with a scheme. Force HTTPS.
-	if callback.startswith("http://"):
-		callback = "https://" + callback[len("http://"):]
-	base = f"https://graph.facebook.com/{version}"
 
 	# 1) App-level webhook subscription (Meta verifies the callback URL right now,
 	#    hitting our GET handler which echoes the challenge for a matching token).
@@ -323,7 +450,7 @@ def register_meta_webhook(channel):
 	# 2) Subscribe the Page / IG account to this app so its events are delivered.
 	subscribed_app = requests.post(
 		f"{base}/{page_id}/subscribed_apps",
-		data={"subscribed_fields": fields, "access_token": page_token},
+		data={"subscribed_fields": fields, "access_token": token},
 		timeout=TIMEOUT,
 	).json()
 

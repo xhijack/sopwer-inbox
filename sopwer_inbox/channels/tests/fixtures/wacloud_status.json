@@ -1,0 +1,15 @@
+{
+  "messaging_product": "whatsapp",
+  "metadata": {
+    "display_phone_number": "6281200000000",
+    "phone_number_id": "PHONE_NUM_ID_123"
+  },
+  "statuses": [
+    {
+      "id": "wamid.text001",
+      "status": "delivered",
+      "timestamp": "1749081700",
+      "recipient_id": "628111222333"
+    }
+  ]
+}
