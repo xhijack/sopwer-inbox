@@ -38,6 +38,9 @@ def make_meta_channel(name, channel_type, page_id, verify_token="vt-test", app_s
             "channel_type": channel_type,
             "enabled": 1,
             "meta_page_id": page_id,
+            # Instagram routes inbound by the IG account id (entry.id); mirror page_id
+            # here so existing routing tests keep matching.
+            "meta_ig_account_id": page_id if channel_type == "Instagram" else None,
             "meta_verify_token": verify_token,
             "meta_page_access_token": "token-abc",
             "meta_app_secret": app_secret,

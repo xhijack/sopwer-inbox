@@ -118,14 +118,17 @@ def _verify_meta_signature(raw_bytes: bytes, header: str, app_secret: str) -> bo
 def _match_meta_channel(object_type: str, entry_id: str):
 	"""Resolve an (object_type, entry_id) pair to an Inbox Channel doc or None.
 
-	Looks up by meta_page_id == entry_id and channel_type matching the platform.
+	The webhook entry.id differs by platform: for Messenger it is the Facebook
+	Page id (meta_page_id); for Instagram it is the IG account id
+	(meta_ig_account_id). Match on the right field per object type.
 	"""
 	channel_type = _OBJECT_TO_CHANNEL_TYPE.get(object_type)
 	if not channel_type:
 		return None
+	id_field = "meta_ig_account_id" if object_type == "instagram" else "meta_page_id"
 	results = frappe.get_all(
 		"Inbox Channel",
-		filters={"meta_page_id": entry_id, "channel_type": channel_type, "enabled": 1},
+		filters={id_field: entry_id, "channel_type": channel_type, "enabled": 1},
 		fields=["name"],
 		limit=1,
 	)

@@ -19,6 +19,7 @@
   "wuzapi_instance",
   "meta_section",
   "meta_page_id",
+  "meta_ig_account_id",
   "meta_app_id",
   "meta_page_access_token",
   "meta_app_secret",
@@ -102,10 +103,17 @@
    "depends_on": "eval:doc.channel_type==\"Facebook Messenger\"||doc.channel_type==\"Instagram\""
   },
   {
-   "description": "Page ID (Messenger) or IG user id (Instagram). Used to route inbound deliveries.",
+   "description": "Facebook Page ID. Used to SEND messages and SUBSCRIBE the webhook — for both Messenger and Instagram (Instagram DMs are sent via the linked Page).",
    "fieldname": "meta_page_id",
    "fieldtype": "Data",
-   "label": "Page ID / IG User ID"
+   "label": "Facebook Page ID"
+  },
+  {
+   "depends_on": "eval:doc.channel_type==\"Instagram\"",
+   "description": "Instagram account id (instagram_business_account.id). Instagram only — used to ROUTE inbound webhooks (entry.id). Get via GET /{page-id}?fields=instagram_business_account.",
+   "fieldname": "meta_ig_account_id",
+   "fieldtype": "Data",
+   "label": "IG Account ID"
   },
   {
    "description": "Meta App ID (App Dashboard → Settings → Basic). Needed for the one-click webhook registration.",
