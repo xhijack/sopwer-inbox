@@ -2,9 +2,8 @@
 # For license information, please see license.txt
 """Inbound webhook endpoints.
 
-Only Telegram has its own webhook here. WhatsApp inbound arrives via the
-delegated WhatsApp app (CLAUDE.md §5) — do NOT add a second Wuzapi webhook.
-Meta (Facebook Messenger + Instagram) share a single /meta endpoint.
+Telegram, Wuzapi (WhatsApp), and Meta (Facebook Messenger + Instagram) each
+have their own endpoint here.
 """
 
 import hashlib
@@ -90,6 +89,42 @@ def telegram(channel=None, debug=None):
 	except Exception:
 		log.error("telegram webhook FAILED | channel=%r\n%s", channel, frappe.get_traceback())
 		raise
+
+
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def wuzapi(channel=None):
+    """Wuzapi (WhatsApp) inbound webhook.
+
+    Point the Wuzapi session webhook at::
+
+        https://<site>/api/method/sopwer_inbox.api.webhooks.wuzapi?channel=<Inbox Channel name>
+
+    Optionally protect with a shared secret stored in ``Inbox Channel.webhook_secret``;
+    pass it as the ``X-Webhook-Secret`` request header.
+    """
+    log = frappe.logger("sopwer_inbox", allow_site=True)
+    req = getattr(frappe, "request", None)
+    try:
+        if req is not None:
+            channel = channel or req.args.get("channel")
+        raw = req.get_data(as_text=True) if req is not None else ""
+    except RuntimeError:
+        # Outside a real request context (e.g. direct test call) — use defaults.
+        raw = ""
+    try:
+        if not channel:
+            frappe.throw(_("Missing channel parameter"))
+        channel_doc = frappe.get_doc("Inbox Channel", channel)
+        if channel_doc.channel_type != "WhatsApp":
+            frappe.throw(_("Channel {0} is not a WhatsApp channel").format(channel))
+        verify_secret(channel_doc, frappe.get_request_header("X-Webhook-Secret"))
+        payload = json.loads(raw or "{}")
+        results = ingest_payload(channel_doc, payload)
+        log.info("wuzapi webhook OK | channel=%r ingested=%s", channel, len(results))
+        return {"ok": True}
+    except Exception:
+        log.error("wuzapi webhook FAILED | channel=%r\n%s", channel, frappe.get_traceback())
+        raise
 
 
 # ---------------------------------------------------------------------------

@@ -262,11 +262,3 @@ fixtures = [
 	{"dt": "Role", "filters": [["name", "in", ["Inbox Agent", "Inbox Manager"]]]},
 	{"dt": "Custom Field", "filters": [["name", "in", ["Contact-inbox_notes"]]]},
 ]
-
-# WhatsApp inbound bridge
-# -----------------------
-# The `whatsapp` app's inbound webhook fans out to handlers registered here.
-# This is how WhatsApp inbound reaches the inbox without a second Wuzapi webhook.
-whatsapp_inbound_handlers = [
-	"sopwer_inbox.channels.whatsapp_inbound.handle_inbound",
-]

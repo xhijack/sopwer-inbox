@@ -1,12 +1,19 @@
 # Copyright (c) 2026, PT Sopwer Teknologi Indonesia and contributors
 # For license information, please see license.txt
 
+import json
+import os
 from unittest.mock import MagicMock, patch
 
 import frappe
 
-from sopwer_inbox.api.webhooks import ingest_payload, register_meta_webhook, verify_secret
+from sopwer_inbox.api.webhooks import ingest_payload, register_meta_webhook, verify_secret, wuzapi
 from sopwer_inbox.tests.base import InboxTestCase, make_channel
+
+FIXTURES = os.path.join(
+    os.path.dirname(__file__),
+    "..", "..", "channels", "tests", "fixtures",
+)
 
 TEXT_UPDATE = {
 	"update_id": 1,
@@ -86,3 +93,54 @@ class TestRegisterMetaWebhook(InboxTestCase):
 		ch = make_channel("WH TG Reg", "Telegram", telegram_bot_token="1:A")
 		with self.assertRaises(frappe.ValidationError):
 			register_meta_webhook(ch.name)
+
+
+class TestWuzapiWebhook(InboxTestCase):
+	"""Tests for the wuzapi inbound webhook endpoint."""
+
+	def _load_fixture(self, name):
+		with open(os.path.join(FIXTURES, name)) as f:
+			return json.load(f)
+
+	def setUp(self):
+		self.channel = make_channel(
+			"WA Webhook Test",
+			"WhatsApp",
+			wuzapi_base_url="http://wuzapi.test",
+			wuzapi_token="tok-wh",
+		)
+
+	def test_ingest_text_payload_via_ingest_payload(self):
+		"""ingest_payload on a WhatsApp channel + wuzapi text fixture creates a message."""
+		payload = self._load_fixture("wuzapi_inbound_text.json")
+		# _fetch_inbound_media would try real HTTP; patch it out.
+		with patch(
+			"sopwer_inbox.channels.whatsapp.WhatsAppAdapter._fetch_inbound_media"
+		):
+			results = ingest_payload(self.channel, payload)
+		self.assertEqual(len(results), 1)
+		msg = results[0]
+		self.assertIsNotNone(msg)
+		conv = frappe.get_doc("Inbox Conversation", msg.conversation)
+		self.assertEqual(conv.external_conversation_id, "628123344556")
+
+	def test_dedup_on_replay(self):
+		"""Second delivery of the same message must not create a duplicate."""
+		payload = self._load_fixture("wuzapi_inbound_text.json")
+		with patch(
+			"sopwer_inbox.channels.whatsapp.WhatsAppAdapter._fetch_inbound_media"
+		):
+			ingest_payload(self.channel, payload)
+			results = ingest_payload(self.channel, payload)
+		self.assertEqual(results, [None])
+
+	def test_missing_channel_param_raises(self):
+		"""Calling wuzapi() without a channel parameter must throw ValidationError."""
+		with self.assertRaises(frappe.ValidationError):
+			wuzapi(channel=None)
+
+	def test_non_whatsapp_channel_raises(self):
+		"""Calling wuzapi() with a non-WhatsApp channel must throw ValidationError."""
+		tg_channel = make_channel("WH TG WZ", "Telegram", telegram_bot_token="1:A")
+		with self.assertRaises(frappe.ValidationError):
+			wuzapi(channel=tg_channel.name)
