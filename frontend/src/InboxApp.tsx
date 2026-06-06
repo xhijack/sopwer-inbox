@@ -294,8 +294,9 @@ export function InboxApp() {
     if (!selId) return;
     await api.setStatus(selId, s);
     await mutateConvs();
-    const ui = s.toLowerCase() as UIStatus;
-    if (ui !== statusFilter) setStatusFilter(ui);
+    // Stay on the current filter (e.g. Open). The conversation simply drops out
+    // of the list once its status no longer matches — don't follow it to the
+    // Resolved tab, which would force the agent back to Open every time.
   }
 
   async function onAssign(a: string | null) {
