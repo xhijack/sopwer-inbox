@@ -103,6 +103,12 @@ class WhatsAppAdapter(BaseChannelAdapter):
             return []
 
         chat = _strip_jid(info.get("Chat") or info.get("Sender"))
+        # Only accept 1:1 customer chats. Group (@g.us), broadcast/status, and
+        # newsletter JIDs strip to non-numeric ids (e.g. "62...-1426388101") that
+        # are not valid phone numbers — skip them entirely (don't enter the inbox).
+        if not chat or not chat.isdigit():
+            return []
+
         message_type, content, media_info = self._classify(event.get("Message") or {})
         if content is None and media_info is None and message_type == "Text":
             # not a user-visible message (receipt, presence, etc.)

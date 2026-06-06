@@ -29,6 +29,17 @@ class TestWhatsAppAdapter(InboxTestCase):
         )
         self.adapter = WhatsAppAdapter(self.channel)
 
+    def test_parse_skips_group_chat(self):
+        # Group/broadcast JIDs strip to a non-numeric id → must be skipped.
+        event = {
+            "event": {
+                "Info": {"ID": "G1", "Chat": "6289655086045-1426388101@g.us",
+                         "Sender": "628111@s.whatsapp.net"},
+                "Message": {"conversation": "halo grup"},
+            }
+        }
+        self.assertEqual(self.adapter.parse_inbound(event), [])
+
     def test_parse_skips_from_me(self):
         # Messages sent from the phone (IsFromMe) must NOT enter the inbox.
         event = {
