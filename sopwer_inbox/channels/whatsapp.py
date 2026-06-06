@@ -96,6 +96,16 @@ class WhatsAppAdapter(BaseChannelAdapter):
         if not info.get("ID"):
             return []
 
+        # TEMP DIAGNOSTIC (remove after recipient/LID fix is confirmed): dump the
+        # full Info so we can see which field carries the real phone-number JID
+        # (@s.whatsapp.net) vs the @lid alias. ERROR level — logger sits at 40.
+        try:
+            frappe.logger("sopwer_inbox", allow_site=True).error(
+                "WA-IN-TRACE info=%s", json.dumps(info)[:2500]
+            )
+        except Exception:
+            pass
+
         # Wuzapi emits an event for EVERY message on the session, including ones
         # sent by the connected account itself (from the phone). Those must not
         # enter the inbox as inbound — they'd appear to come from the customer.
