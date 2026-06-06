@@ -12,6 +12,16 @@ from sopwer_inbox.core.ingest import publish_new_message
 PREVIEW_LEN = 140
 
 
+def _trace(msg, *args):
+	"""TEMP outbound-path tracing (remove once outbound delivery is confirmed).
+	Logged at ERROR level on purpose — the sopwer_inbox logger sits at level 40,
+	so WARNING/INFO would be filtered and never written to logs/sopwer_inbox.log."""
+	try:
+		frappe.logger("sopwer_inbox", allow_site=True).error("INBOX-" + msg, *args)
+	except Exception:
+		pass
+
+
 def _get_conversation(conversation):
 	return frappe.get_doc("Inbox Conversation", conversation)
 
@@ -27,13 +37,17 @@ def _touch(conversation_doc, preview, *, reset_unread=False):
 def _dispatch(conversation_doc, message, *, text, media_path):
 	"""Send an outgoing message through the channel adapter. On failure, mark the
 	message Failed instead of crashing the UI (CLAUDE.md §7)."""
+	_trace("DISPATCH channel=%s msg=%s", conversation_doc.channel, message.name)
 	try:
 		adapter = get_adapter(conversation_doc.channel)
+		_trace("DISPATCH-ADAPTER %s", type(adapter).__name__)
 		result = adapter.send_message(conversation_doc, text=text, media_path=media_path)
 		message.external_message_id = result.get("external_message_id")
 		message.delivery_status = result.get("delivery_status", "Sent")
+		_trace("DISPATCH-OK status=%s id=%s", message.delivery_status, message.external_message_id)
 	except Exception:
 		message.delivery_status = "Failed"
+		_trace("DISPATCH-FAIL %s", frappe.get_traceback())
 		frappe.log_error(
 			title="Sopwer Inbox outbound send failed",
 			message=frappe.get_traceback(),
@@ -51,6 +65,11 @@ def send_message(conversation, text=None, message_type="Text", media_path=None, 
 	"""
 	is_internal = int(is_internal or 0)
 	conversation_doc = _get_conversation(conversation)
+	_trace(
+		"SEND conv=%s channel=%s type=%s is_internal=%s has_text=%s media=%s user=%s",
+		conversation, conversation_doc.channel, message_type, is_internal,
+		bool(text), bool(media_path), frappe.session.user,
+	)
 
 	message = frappe.get_doc(
 		{
