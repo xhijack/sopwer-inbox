@@ -10,6 +10,7 @@ Inbound: arrives via the new ``sopwer_inbox.api.webhooks.wuzapi`` endpoint
 the Wuzapi/whatsmeow event shape — unchanged from before.
 """
 
+import datetime
 import mimetypes
 import os
 
@@ -31,6 +32,24 @@ def _strip_jid(jid: str) -> str:
     if not jid:
         return jid
     return jid.split("@", 1)[0].split(":", 1)[0]
+
+
+def _wuzapi_timestamp(value):
+    """Wuzapi (whatsmeow) timestamps are RFC3339 with a timezone offset, e.g.
+    ``2026-06-06T09:29:23+07:00``. MariaDB datetime columns reject tz-aware values,
+    so convert to a NAIVE datetime in the site timezone (matching now_datetime())."""
+    if not value:
+        return frappe.utils.now_datetime()
+    try:
+        dt = frappe.utils.get_datetime(value)
+    except Exception:
+        return frappe.utils.now_datetime()
+    if dt.tzinfo is not None:
+        utc_naive = dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        dt = frappe.utils.convert_utc_to_system_timezone(utc_naive)
+        if getattr(dt, "tzinfo", None) is not None:
+            dt = dt.replace(tzinfo=None)
+    return dt
 
 
 class WhatsAppAdapter(BaseChannelAdapter):
@@ -92,11 +111,7 @@ class WhatsAppAdapter(BaseChannelAdapter):
             "message_type": message_type,
             "content": content,
             "media_url": None,
-            "timestamp": (
-                frappe.utils.get_datetime(info.get("Timestamp"))
-                if info.get("Timestamp")
-                else frappe.utils.now_datetime()
-            ),
+            "timestamp": _wuzapi_timestamp(info.get("Timestamp")),
             "raw": payload,
         }
 

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 
-from sopwer_inbox.channels.whatsapp import WhatsAppAdapter, _strip_jid
+from sopwer_inbox.channels.whatsapp import WhatsAppAdapter, _strip_jid, _wuzapi_timestamp
 from sopwer_inbox.tests.base import InboxTestCase, make_channel
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -28,6 +28,14 @@ class TestWhatsAppAdapter(InboxTestCase):
             wuzapi_token="tok-test",
         )
         self.adapter = WhatsAppAdapter(self.channel)
+
+    def test_wuzapi_timestamp_strips_tzinfo(self):
+        # RFC3339 with offset must become a naive datetime (MariaDB rejects offsets).
+        dt = _wuzapi_timestamp("2026-06-06T09:29:23+07:00")
+        self.assertIsNone(dt.tzinfo)
+
+    def test_wuzapi_timestamp_none_falls_back_to_now(self):
+        self.assertIsNotNone(_wuzapi_timestamp(None))
 
     def test_strip_jid(self):
         self.assertEqual(_strip_jid("628123344556@s.whatsapp.net"), "628123344556")
