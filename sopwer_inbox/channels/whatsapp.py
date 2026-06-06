@@ -95,6 +95,12 @@ class WhatsAppAdapter(BaseChannelAdapter):
         if not info.get("ID"):
             return []
 
+        # Wuzapi emits an event for EVERY message on the session, including ones
+        # sent by the connected account itself (from the phone). Those must not
+        # enter the inbox as inbound — they'd appear to come from the customer.
+        if info.get("IsFromMe") or info.get("FromMe") or info.get("is_from_me"):
+            return []
+
         chat = _strip_jid(info.get("Chat") or info.get("Sender"))
         message_type, content, media_info = self._classify(event.get("Message") or {})
         if content is None and media_info is None and message_type == "Text":

@@ -127,6 +127,10 @@ def extract_wuzapi_base64(resp: dict) -> bytes | None:
 # WuzapiClient
 # ---------------------------------------------------------------------------
 
+class WuzapiError(Exception):
+    """Wuzapi accepted the HTTP request but reported a failed send."""
+
+
 class WuzapiClient:
     """Thin HTTP client for the Wuzapi REST API."""
 
@@ -137,6 +141,19 @@ class WuzapiClient:
     def _headers(self) -> dict:
         return {"Content-Type": "application/json", "Token": self.token}
 
+    def _check(self, resp) -> dict:
+        """Raise on a failed send. Wuzapi can return HTTP 200 with
+        ``{"success": false, "error": "..."}`` — without this, the caller would
+        wrongly treat it as delivered."""
+        resp.raise_for_status()
+        try:
+            body = resp.json()
+        except Exception:
+            return {}
+        if isinstance(body, dict) and body.get("success") is False:
+            raise WuzapiError(str(body.get("error") or body.get("data") or "Wuzapi send gagal"))
+        return body
+
     def send_text(self, to: str, body: str) -> dict:
         """POST /chat/send/text — plain text message."""
         url = f"{self.base_url}/chat/send/text"
@@ -146,7 +163,7 @@ class WuzapiClient:
             "Id": str(uuid.uuid4()),
         }
         resp = requests.post(url, json=payload, headers=self._headers(), timeout=20)
-        return resp.json()
+        return self._check(resp)
 
     def send_media(
         self,
@@ -173,7 +190,7 @@ class WuzapiClient:
         if kind == "document" and file_name:
             payload["FileName"] = file_name
         resp = requests.post(url, json=payload, headers=self._headers(), timeout=20)
-        return resp.json()
+        return self._check(resp)
 
     def download_media(self, kind: str, info: dict) -> dict:
         """POST /chat/download{kind} — decrypt inbound WhatsApp media.

@@ -29,6 +29,17 @@ class TestWhatsAppAdapter(InboxTestCase):
         )
         self.adapter = WhatsAppAdapter(self.channel)
 
+    def test_parse_skips_from_me(self):
+        # Messages sent from the phone (IsFromMe) must NOT enter the inbox.
+        event = {
+            "event": {
+                "Info": {"ID": "X1", "Chat": "628999@s.whatsapp.net",
+                         "Sender": "628111@s.whatsapp.net", "IsFromMe": True},
+                "Message": {"conversation": "halo dari hp"},
+            }
+        }
+        self.assertEqual(self.adapter.parse_inbound(event), [])
+
     def test_wuzapi_timestamp_strips_tzinfo(self):
         # RFC3339 with offset must become a naive datetime (MariaDB rejects offsets).
         dt = _wuzapi_timestamp("2026-06-06T09:29:23+07:00")

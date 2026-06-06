@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 from sopwer_inbox.channels.wuzapi_client import (
     WuzapiClient,
+    WuzapiError,
     decode_data_uri,
     extract_wuzapi_base64,
     file_to_wuzapi_base64,
@@ -157,6 +158,22 @@ class TestWuzapiClientSendText(InboxTestCase):
             self.client.send_text("628111", "Hi")
         headers = post.call_args.kwargs["headers"]
         self.assertEqual(headers["Token"], "TOKEN-123")
+
+    def test_raises_on_success_false(self):
+        # Wuzapi returns HTTP 200 with success:false → must NOT be treated as sent.
+        with patch("sopwer_inbox.channels.wuzapi_client.requests.post") as post:
+            post.return_value = MagicMock(
+                raise_for_status=lambda: None,
+                json=lambda: {"success": False, "error": "No session for user"},
+            )
+            with self.assertRaises(WuzapiError):
+                self.client.send_text("628111", "Hi")
+
+    def test_no_raise_when_success_absent(self):
+        # Responses without a `success` key are treated as OK (don't break working sends).
+        with patch("sopwer_inbox.channels.wuzapi_client.requests.post") as post:
+            post.return_value = MagicMock(raise_for_status=lambda: None, json=lambda: {"code": 200})
+            self.client.send_text("628111", "Hi")  # should not raise
 
 
 class TestWuzapiClientSendMedia(InboxTestCase):
