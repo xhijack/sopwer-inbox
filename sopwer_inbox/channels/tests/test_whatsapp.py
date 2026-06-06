@@ -95,6 +95,28 @@ class TestWhatsAppAdapter(InboxTestCase):
         self.assertEqual(msg["external_conversation_id"], "41107182346431@lid")
         self.assertEqual(msg["sender_phone"], "62818889344")
 
+    def test_classify_image_extracts_directpath_and_fileenc(self):
+        """Wuzapi download needs DirectPath + FileEncSHA256 (real whatsmeow proto
+        field names directPath / fileEncSHA256), else it fails 'invalid media hmac'."""
+        msg = {
+            "imageMessage": {
+                "URL": "https://mmg.whatsapp.net/x.enc",
+                "directPath": "/v/x.enc",
+                "mediaKey": "cHjjKEY=",
+                "mimetype": "image/jpeg",
+                "fileEncSHA256": "z7gKENC=",
+                "fileSHA256": "T4BYSHA=",
+                "fileLength": 140845,
+            }
+        }
+        mtype, _content, info = self.adapter._classify(msg)
+        self.assertEqual(mtype, "Image")
+        self.assertEqual(info["Url"], "https://mmg.whatsapp.net/x.enc")
+        self.assertEqual(info["DirectPath"], "/v/x.enc")
+        self.assertEqual(info["MediaKey"], "cHjjKEY=")
+        self.assertEqual(info["FileEncSHA256"], "z7gKENC=")
+        self.assertEqual(info["FileSHA256"], "T4BYSHA=")
+
     def test_parse_lid_not_skipped_as_group(self):
         # A @lid 1:1 chat must NOT be filtered out by the group/broadcast guard.
         event = {

@@ -196,14 +196,18 @@ class WuzapiClient:
         """POST /chat/download{kind} — decrypt inbound WhatsApp media.
 
         kind: one of image|video|audio|document.
-        info: dict from the inbound webhook with Url/MediaKey/Mimetype/FileSHA256/FileLength.
+        info: dict from the inbound webhook. Must carry DirectPath + FileEncSHA256
+        in addition to Url/MediaKey/Mimetype/FileSHA256/FileLength — without them
+        whatsmeow cannot fetch/verify the media and returns "invalid media hmac".
         Returns the raw Wuzapi JSON response dict.
         """
         url = f"{self.base_url}/chat/download{kind}"
         payload = {
             "Url": info.get("Url"),
+            "DirectPath": info.get("DirectPath"),
             "MediaKey": info.get("MediaKey"),
             "Mimetype": info.get("Mimetype"),
+            "FileEncSHA256": info.get("FileEncSHA256"),
             "FileSHA256": info.get("FileSHA256"),
             "FileLength": info.get("FileLength"),
         }

@@ -227,6 +227,29 @@ class WhatsAppAdapter(BaseChannelAdapter):
         return None
 
     @staticmethod
+    def _media_info(m: dict, kind: str, caption) -> dict:
+        """Normalise a whatsmeow media proto into the dict Wuzapi download needs.
+
+        Includes DirectPath + FileEncSHA256: Wuzapi's download struct requires
+        them to fetch and verify the encrypted media — omitting them makes every
+        download fail with "invalid media hmac".  Field names in the proto JSON
+        vary, so extract defensively via _pick."""
+        _pick = WhatsAppAdapter._pick
+        return {
+            "kind": kind,
+            "Url": _pick(m, "url", "URL", "Url"),
+            "DirectPath": _pick(m, "directPath", "DirectPath", "direct_path"),
+            "MediaKey": _pick(m, "mediaKey", "MediaKey"),
+            "Mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
+            "FileEncSHA256": _pick(m, "fileEncSha256", "fileEncSHA256", "FileEncSHA256"),
+            "FileSHA256": _pick(m, "fileSha256", "fileSHA256", "FileSHA256"),
+            "FileLength": _pick(m, "fileLength", "FileLength"),
+            "file_name": _pick(m, "fileName", "FileName", "file_name"),
+            "media_mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
+            "caption": caption,
+        }
+
+    @staticmethod
     def _classify(message: dict):
         """Return (message_type, content, media_info).
 
@@ -242,68 +265,26 @@ class WhatsAppAdapter(BaseChannelAdapter):
 
         _pick = WhatsAppAdapter._pick
 
+        _media_info = WhatsAppAdapter._media_info
+
         if message.get("imageMessage"):
             m = message["imageMessage"] or {}
             caption = _pick(m, "caption", "Caption")
-            media_info = {
-                "kind": "image",
-                "Url": _pick(m, "url", "URL", "Url"),
-                "MediaKey": _pick(m, "mediaKey", "MediaKey"),
-                "Mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "FileSHA256": _pick(m, "fileSha256", "fileSHA256", "FileSHA256"),
-                "FileLength": _pick(m, "fileLength", "FileLength"),
-                "file_name": _pick(m, "fileName", "FileName", "file_name"),
-                "media_mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "caption": caption,
-            }
-            return "Image", caption, media_info
+            return "Image", caption, _media_info(m, "image", caption)
 
         if message.get("documentMessage"):
             m = message["documentMessage"] or {}
             caption = _pick(m, "caption", "Caption", "title", "Title")
-            media_info = {
-                "kind": "document",
-                "Url": _pick(m, "url", "URL", "Url"),
-                "MediaKey": _pick(m, "mediaKey", "MediaKey"),
-                "Mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "FileSHA256": _pick(m, "fileSha256", "fileSHA256", "FileSHA256"),
-                "FileLength": _pick(m, "fileLength", "FileLength"),
-                "file_name": _pick(m, "fileName", "FileName", "file_name"),
-                "media_mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "caption": caption,
-            }
-            return "File", caption, media_info
+            return "File", caption, _media_info(m, "document", caption)
 
         if message.get("audioMessage"):
             m = message["audioMessage"] or {}
-            media_info = {
-                "kind": "audio",
-                "Url": _pick(m, "url", "URL", "Url"),
-                "MediaKey": _pick(m, "mediaKey", "MediaKey"),
-                "Mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "FileSHA256": _pick(m, "fileSha256", "fileSHA256", "FileSHA256"),
-                "FileLength": _pick(m, "fileLength", "FileLength"),
-                "file_name": _pick(m, "fileName", "FileName", "file_name"),
-                "media_mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "caption": None,
-            }
-            return "Audio", None, media_info
+            return "Audio", None, _media_info(m, "audio", None)
 
         if message.get("videoMessage"):
             m = message["videoMessage"] or {}
             caption = _pick(m, "caption", "Caption")
-            media_info = {
-                "kind": "video",
-                "Url": _pick(m, "url", "URL", "Url"),
-                "MediaKey": _pick(m, "mediaKey", "MediaKey"),
-                "Mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "FileSHA256": _pick(m, "fileSha256", "fileSHA256", "FileSHA256"),
-                "FileLength": _pick(m, "fileLength", "FileLength"),
-                "file_name": _pick(m, "fileName", "FileName", "file_name"),
-                "media_mimetype": _pick(m, "mimetype", "Mimetype", "mimeType"),
-                "caption": caption,
-            }
-            return "Video", caption, media_info
+            return "Video", caption, _media_info(m, "video", caption)
 
         if message.get("locationMessage"):
             loc = message["locationMessage"] or {}

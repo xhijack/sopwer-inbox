@@ -240,12 +240,17 @@ class TestWuzapiClientDownloadMedia(InboxTestCase):
         call = self._download("video")
         self.assertEqual(call.args[0], "http://wuzapi.test/chat/downloadvideo")
 
-    def test_all_five_fields_in_payload(self):
+    def test_all_fields_in_payload(self):
+        # Wuzapi's download struct needs DirectPath + FileEncSHA256 too — without
+        # them whatsmeow cannot fetch/verify the media and fails "invalid media hmac".
         info = {
-            "Url": "u", "MediaKey": "k", "Mimetype": "m",
-            "FileSHA256": "s", "FileLength": 1,
+            "Url": "u", "DirectPath": "d", "MediaKey": "k", "Mimetype": "m",
+            "FileEncSHA256": "e", "FileSHA256": "s", "FileLength": 1,
         }
         call = self._download("image", info)
         body = call.kwargs["json"]
-        for field in ("Url", "MediaKey", "Mimetype", "FileSHA256", "FileLength"):
+        for field in ("Url", "DirectPath", "MediaKey", "Mimetype",
+                      "FileEncSHA256", "FileSHA256", "FileLength"):
             self.assertIn(field, body)
+        self.assertEqual(body["DirectPath"], "d")
+        self.assertEqual(body["FileEncSHA256"], "e")
