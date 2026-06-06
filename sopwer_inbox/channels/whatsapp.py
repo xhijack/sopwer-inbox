@@ -295,7 +295,26 @@ class WhatsAppAdapter(BaseChannelAdapter):
         else:
             resp = client.send_text(recipient, text)
 
-        return self._send_result(resp)
+        result = self._send_result(resp)
+        self._trace_outbound(recipient, resp, result, media=bool(media_path))
+        return result
+
+    @staticmethod
+    def _trace_outbound(recipient, resp, result, *, media):
+        """TEMP DIAGNOSTIC (remove once outbound delivery is confirmed): trace
+        EVERY outbound send to logs/sopwer_inbox.log — including ones Wuzapi
+        reports as success — so a 'success but never delivered' send is visible.
+        Logged at ERROR level on purpose: the sopwer_inbox logger is configured
+        at level 40, so WARNING/INFO would be filtered and never written."""
+        try:
+            raw = json.dumps(resp) if isinstance(resp, (dict, list)) else str(resp)
+            frappe.logger("sopwer_inbox", allow_site=True).error(
+                "WA-OUT-TRACE to=%s media=%s status=%s id=%s resp=%s",
+                recipient, media, result.get("delivery_status"),
+                result.get("external_message_id"), raw[:2000],
+            )
+        except Exception:
+            pass
 
     @staticmethod
     def _send_result(resp) -> dict:
