@@ -75,6 +75,53 @@ class TestWhatsAppAdapter(InboxTestCase):
     def test_parse_non_message_returns_empty(self):
         self.assertEqual(self.adapter.parse_inbound({"type": "ReadReceipt", "event": {}}), [])
 
+    def test_parse_lid_keeps_suffix_for_delivery(self):
+        """A @lid sender (newer WhatsApp privacy alias) is NOT a phone number.
+        Wuzapi accepts a bare-LID send (HTTP 200) but never delivers it, so the
+        @lid suffix MUST be kept on external_conversation_id for outbound to work.
+        The real phone number rides along in an alt field → use it for display."""
+        event = {
+            "event": {
+                "Info": {
+                    "ID": "LID1", "Chat": "41107182346431@lid",
+                    "Sender": "41107182346431@lid",
+                    "SenderAlt": "62818889344@s.whatsapp.net",
+                    "AddressingMode": "lid", "PushName": "Pak Budi",
+                },
+                "Message": {"conversation": "halo via lid"},
+            }
+        }
+        [msg] = self.adapter.parse_inbound(event)
+        self.assertEqual(msg["external_conversation_id"], "41107182346431@lid")
+        self.assertEqual(msg["sender_phone"], "62818889344")
+
+    def test_parse_lid_not_skipped_as_group(self):
+        # A @lid 1:1 chat must NOT be filtered out by the group/broadcast guard.
+        event = {
+            "event": {
+                "Info": {"ID": "LID2", "Chat": "41107182346431@lid",
+                         "Sender": "41107182346431@lid"},
+                "Message": {"conversation": "hi"},
+            }
+        }
+        self.assertEqual(len(self.adapter.parse_inbound(event)), 1)
+
+    def test_send_to_lid_conversation_uses_full_jid(self):
+        """Replying to a @lid conversation must send the full JID (proven to
+        deliver), not the bare LID digits."""
+        mock_client = MagicMock()
+        mock_client.send_text.return_value = {"success": True, "data": {"Id": "x"}}
+        conv = frappe.get_doc(
+            {
+                "doctype": "Inbox Conversation",
+                "channel": self.channel.name,
+                "external_conversation_id": "41107182346431@lid",
+            }
+        )
+        with patch.object(self.adapter, "_client", return_value=mock_client):
+            self.adapter.send_message(conv, text="balas")
+        mock_client.send_text.assert_called_once_with("41107182346431@lid", "balas")
+
     def test_resolve_local_file_returns_existing_path(self):
         """file_url must be resolved to a real on-disk path for base64 encoding."""
         f = frappe.get_doc(

@@ -35,6 +35,32 @@ def _strip_jid(jid: str) -> str:
     return jid.split("@", 1)[0].split(":", 1)[0]
 
 
+def _conv_id(jid: str) -> str:
+    """Conversation identity AND outbound send-to address for WhatsApp.
+
+    Phone-number JIDs (``…@s.whatsapp.net`` / ``…@c.us``) collapse to bare digits
+    — unchanged, and Wuzapi delivers to bare digits.  ``@lid`` JIDs MUST keep
+    their suffix: a bare LID like ``41107182346431`` is NOT a phone number, so
+    Wuzapi accepts a send to it (HTTP 200, "Sent") but silently never delivers.
+    Sending the full ``…@lid`` JID does deliver."""
+    if jid and jid.endswith("@lid"):
+        return jid
+    return _strip_jid(jid)
+
+
+def _phone_jid(info: dict) -> str | None:
+    """Best-effort real phone number (bare digits) from the inbound event.
+
+    Newer WhatsApp accounts are addressed by a ``@lid`` alias; the actual phone
+    number rides along in an alt field (whatsmeow ``SenderAlt``/``RecipientAlt``).
+    Scan every value defensively so JSON field-name variants still work.  Returns
+    ``None`` when no ``@s.whatsapp.net`` JID is present."""
+    for v in (info or {}).values():
+        if isinstance(v, str) and v.endswith("@s.whatsapp.net"):
+            return _strip_jid(v)
+    return None
+
+
 def _wuzapi_timestamp(value):
     """Wuzapi (whatsmeow) timestamps are RFC3339 with a timezone offset, e.g.
     ``2026-06-06T09:29:23+07:00``. MariaDB datetime columns reject tz-aware values,
@@ -112,11 +138,12 @@ class WhatsAppAdapter(BaseChannelAdapter):
         if info.get("IsFromMe") or info.get("FromMe") or info.get("is_from_me"):
             return []
 
-        chat = _strip_jid(info.get("Chat") or info.get("Sender"))
+        chat = _conv_id(info.get("Chat") or info.get("Sender"))
+        local = _strip_jid(chat)
         # Only accept 1:1 customer chats. Group (@g.us), broadcast/status, and
         # newsletter JIDs strip to non-numeric ids (e.g. "62...-1426388101") that
         # are not valid phone numbers — skip them entirely (don't enter the inbox).
-        if not chat or not chat.isdigit():
+        if not local or not local.isdigit():
             return []
 
         message_type, content, media_info = self._classify(event.get("Message") or {})
@@ -130,7 +157,7 @@ class WhatsAppAdapter(BaseChannelAdapter):
             "external_message_id": info.get("ID"),
             "sender_external_id": _strip_jid(info.get("Sender")),
             "sender_name": info.get("PushName"),
-            "sender_phone": chat,
+            "sender_phone": _phone_jid(info) or local,
             "message_type": message_type,
             "content": content,
             "media_url": None,
