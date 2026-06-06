@@ -11,6 +11,7 @@ the Wuzapi/whatsmeow event shape — unchanged from before.
 """
 
 import datetime
+import json
 import mimetypes
 import os
 
@@ -132,6 +133,7 @@ class WhatsAppAdapter(BaseChannelAdapter):
         Best-effort: on any failure the message is still ingested as text/caption
         and media_url remains None.  Never raises.
         """
+        resp = None
         try:
             client = self._client()
             resp = client.download_media(media_info["kind"], media_info)
@@ -147,11 +149,30 @@ class WhatsAppAdapter(BaseChannelAdapter):
                 normalized["media_bytes"] = media_bytes
                 normalized["media_filename"] = filename
                 normalized["media_mimetype"] = mimetype
+                return
         except Exception:
             frappe.log_error(
                 title="WhatsApp inbound media fetch failed",
                 message=frappe.get_traceback(),
             )
+            return
+
+        # No exception but no bytes — surface WHY (param vs response shape) so the
+        # real Wuzapi field names / download response can be debugged from the UI.
+        try:
+            present = {k: bool(media_info.get(k)) for k in
+                       ("Url", "MediaKey", "Mimetype", "FileSHA256", "FileLength")}
+            frappe.log_error(
+                title="WhatsApp inbound media: no bytes",
+                message="kind={0}\nparams_present={1}\nresp={2}\nraw_message={3}".format(
+                    media_info.get("kind"),
+                    present,
+                    (json.dumps(resp) if isinstance(resp, (dict, list)) else str(resp))[:2500],
+                    json.dumps((normalized.get("raw") or {}).get("event", {}).get("Message", {}))[:3000],
+                ),
+            )
+        except Exception:
+            pass
 
     @staticmethod
     def _pick(d: dict, *keys):
