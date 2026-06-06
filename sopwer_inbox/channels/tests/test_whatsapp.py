@@ -106,9 +106,14 @@ class TestWhatsAppAdapter(InboxTestCase):
     # -- outbound send_text via mock client --------------------------------
 
     def test_send_text_calls_client_send_text(self):
-        """send_message(text=...) must call client.send_text with recipient + text."""
+        """send_message(text=...) must call client.send_text with recipient + text,
+        report Sent, and capture Wuzapi's real message id from data.Id."""
         mock_client = MagicMock()
-        mock_client.send_text.return_value = {"ok": 1}
+        mock_client.send_text.return_value = {
+            "code": 200,
+            "success": True,
+            "data": {"Id": "3EB0ACK123", "Details": "Sent"},
+        }
         conv = frappe.get_doc(
             {
                 "doctype": "Inbox Conversation",
@@ -120,13 +125,36 @@ class TestWhatsAppAdapter(InboxTestCase):
             result = self.adapter.send_message(conv, text="Hello!")
         mock_client.send_text.assert_called_once_with("628999", "Hello!")
         self.assertEqual(result["delivery_status"], "Sent")
+        self.assertEqual(result["external_message_id"], "3EB0ACK123")
+
+    def test_send_text_pending_when_no_wuzapi_ack(self):
+        """A response WITHOUT data.Id / success:true must NOT be reported as Sent.
+        Wuzapi can accept (HTTP 200) a send onto a disconnected session and never
+        deliver it — reporting that as Sent hides a silent black hole. Mark Pending."""
+        mock_client = MagicMock()
+        mock_client.send_text.return_value = {"ok": 1}  # ambiguous: no Id, no success
+        conv = frappe.get_doc(
+            {
+                "doctype": "Inbox Conversation",
+                "channel": self.channel.name,
+                "external_conversation_id": "628999",
+            }
+        )
+        with patch.object(self.adapter, "_client", return_value=mock_client):
+            result = self.adapter.send_message(conv, text="Hello!")
+        self.assertEqual(result["delivery_status"], "Pending")
+        self.assertIsNone(result["external_message_id"])
 
     # -- outbound send_media via mock client -------------------------------
 
     def test_send_media_calls_client_send_media(self):
         """send_message(media_path=...) must resolve the file, detect kind, call send_media."""
         mock_client = MagicMock()
-        mock_client.send_media.return_value = {"ok": 1}
+        mock_client.send_media.return_value = {
+            "code": 200,
+            "success": True,
+            "data": {"Id": "3EB0MEDIA9", "Details": "Sent"},
+        }
         conv = frappe.get_doc(
             {
                 "doctype": "Inbox Conversation",

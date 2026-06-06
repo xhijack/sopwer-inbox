@@ -285,7 +285,7 @@ class WhatsAppAdapter(BaseChannelAdapter):
             mime = guess_mimetype(local)
             kind = wuzapi_kind(mime)
             data_uri = file_to_wuzapi_base64(local, mime)
-            client.send_media(
+            resp = client.send_media(
                 recipient,
                 kind,
                 data_uri,
@@ -293,7 +293,32 @@ class WhatsAppAdapter(BaseChannelAdapter):
                 caption=text,
             )
         else:
-            client.send_text(recipient, text)
+            resp = client.send_text(recipient, text)
 
-        # Wuzapi does not return a reliable provider message id; mark Sent.
-        return {"external_message_id": None, "delivery_status": "Sent"}
+        return self._send_result(resp)
+
+    @staticmethod
+    def _send_result(resp) -> dict:
+        """Map Wuzapi's send response onto inbox delivery fields.
+
+        Wuzapi acknowledges a real send as
+        ``{"code":200,"success":true,"data":{"Id":"3EB0..","Details":"Sent"}}``.
+        ``_check`` already raised on ``success:false``, so here we only need to
+        tell a genuine ack apart from an ambiguous body.  When there is NO clear
+        ack we must NOT report "Sent": Wuzapi can accept (HTTP 200) a send onto a
+        disconnected/logged-out session and silently never deliver it.  Mark it
+        "Pending" and log the raw response so the failure is never invisible.
+        """
+        data = resp.get("data") if isinstance(resp, dict) else None
+        msg_id = data.get("Id") or data.get("id") if isinstance(data, dict) else None
+        acked = bool(msg_id) or (isinstance(resp, dict) and resp.get("success") is True)
+        if acked:
+            return {
+                "external_message_id": str(msg_id)[:500] if msg_id else None,
+                "delivery_status": "Sent",
+            }
+        frappe.log_error(
+            title="WhatsApp outbound: no Wuzapi ack",
+            message=(json.dumps(resp) if isinstance(resp, (dict, list)) else str(resp))[:3000],
+        )
+        return {"external_message_id": None, "delivery_status": "Pending"}
