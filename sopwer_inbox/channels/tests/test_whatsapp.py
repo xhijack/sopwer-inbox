@@ -40,6 +40,41 @@ class TestWhatsAppAdapter(InboxTestCase):
         }
         self.assertEqual(self.adapter.parse_inbound(event), [])
 
+    def test_parse_skips_group_with_alldigit_id(self):
+        # A group whose JID strips to ALL digits must still be skipped — reject by
+        # the @g.us suffix, not by the digit-shape heuristic.
+        event = {
+            "event": {
+                "Info": {"ID": "G2", "Chat": "123456789012345@g.us",
+                         "Sender": "628111@s.whatsapp.net"},
+                "Message": {"conversation": "halo grup numerik"},
+            }
+        }
+        self.assertEqual(self.adapter.parse_inbound(event), [])
+
+    def test_parse_skips_when_isgroup_flag(self):
+        # whatsmeow marks group messages with IsGroup=true → skip regardless of JID.
+        event = {
+            "event": {
+                "Info": {"ID": "G3", "Chat": "628111@s.whatsapp.net",
+                         "Sender": "628111@s.whatsapp.net", "IsGroup": True},
+                "Message": {"conversation": "halo"},
+            }
+        }
+        self.assertEqual(self.adapter.parse_inbound(event), [])
+
+    def test_parse_skips_newsletter_and_broadcast(self):
+        for chat in ("120363000000000000@newsletter", "status@broadcast",
+                     "1234567890@broadcast"):
+            event = {
+                "event": {
+                    "Info": {"ID": "N-" + chat, "Chat": chat,
+                             "Sender": "628111@s.whatsapp.net"},
+                    "Message": {"conversation": "x"},
+                }
+            }
+            self.assertEqual(self.adapter.parse_inbound(event), [], chat)
+
     def test_parse_skips_from_me(self):
         # Messages sent from the phone (IsFromMe) must NOT enter the inbox.
         event = {

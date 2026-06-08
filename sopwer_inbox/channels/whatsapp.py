@@ -138,11 +138,18 @@ class WhatsAppAdapter(BaseChannelAdapter):
         if info.get("IsFromMe") or info.get("FromMe") or info.get("is_from_me"):
             return []
 
+        # Only accept 1:1 customer chats. Reject groups, broadcast lists, status,
+        # and newsletters/channels by their JID server suffix (and whatsmeow's
+        # IsGroup flag) — NOT by digit-shape: newer group ids can be all-digits,
+        # and a missing Chat would otherwise fall back to the participant's number.
+        raw_src = info.get("Chat") or info.get("Sender") or ""
+        if info.get("IsGroup") or any(
+            s in raw_src for s in ("@g.us", "@broadcast", "@newsletter")
+        ):
+            return []
+
         chat = _conv_id(info.get("Chat") or info.get("Sender"))
         local = _strip_jid(chat)
-        # Only accept 1:1 customer chats. Group (@g.us), broadcast/status, and
-        # newsletter JIDs strip to non-numeric ids (e.g. "62...-1426388101") that
-        # are not valid phone numbers — skip them entirely (don't enter the inbox).
         if not local or not local.isdigit():
             return []
 
