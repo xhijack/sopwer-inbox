@@ -45,6 +45,7 @@ export function InboxApp() {
   const [statusFilter, setStatusFilter] = useState<UIStatus>("open");
   const [scope, setScope] = useState<"me" | "all">("all");
   const [channelSel, setChannelSel] = useState<string[]>([]);
+  const [tagSel, setTagSel] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [filterAgent, setFilterAgent] = useState<string | null>(null);
   const [unreplied, setUnreplied] = useState(false);
@@ -111,19 +112,28 @@ export function InboxApp() {
       mine: 0,
       all: conversations.length,
       byChannel: {},
+      byTag: {},
     };
     conversations.forEach((x) => {
       c[x.status]++;
       if (x.assignee === session.userId) c.mine++;
       c.byChannel[x.channelId] = (c.byChannel[x.channelId] || 0) + 1;
+      x.tags.forEach((t) => (c.byTag[t] = (c.byTag[t] || 0) + 1));
     });
     return c;
   }, [conversations, session.userId]);
+
+  // Distinct tags already assigned to conversations ("tags yang sudah dibuat").
+  const allTags = useMemo(
+    () => [...new Set(conversations.flatMap((c) => c.tags))].sort(),
+    [conversations],
+  );
 
   const filtered = useMemo<ConversationVM[]>(() => {
     let r = conversations.filter((c) => c.status === statusFilter);
     if (scope === "me") r = r.filter((c) => c.assignee === session.userId);
     if (channelSel.length) r = r.filter((c) => channelSel.includes(c.channelId));
+    if (tagSel.length) r = r.filter((c) => c.tags.some((t) => tagSel.includes(t)));
     if (filterAgent) r = r.filter((c) => c.assignee === filterAgent);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -138,7 +148,7 @@ export function InboxApp() {
     if (unreplied) r = r.filter((c) => c.unread > 0);
     if (sortBy === "oldest") r = [...r].reverse();
     return r;
-  }, [conversations, statusFilter, scope, channelSel, filterAgent, search, unreplied, sortBy, session.userId]);
+  }, [conversations, statusFilter, scope, channelSel, tagSel, filterAgent, search, unreplied, sortBy, session.userId]);
 
   const searchEmpty = search.trim() !== "" && filtered.length === 0;
 
@@ -164,6 +174,10 @@ export function InboxApp() {
 
   function toggleChannel(id: string) {
     setChannelSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  function toggleTag(t: string) {
+    setTagSel((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
   }
 
   /* ── optimistic send ── */
@@ -392,6 +406,10 @@ export function InboxApp() {
         channelSel={channelSel}
         toggleChannel={toggleChannel}
         clearChannels={() => setChannelSel([])}
+        tags={allTags}
+        tagSel={tagSel}
+        toggleTag={toggleTag}
+        clearTags={() => setTagSel([])}
         role={session.role}
         onOpenCanned={() => setModal("canned")}
         onOpenAI={() => setModal("ai")}

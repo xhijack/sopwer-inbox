@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Ic, ChannelGlyph } from "./icons";
+import { tagClass } from "@/lib/format";
 import logoUrl from "@/assets/sopwer-logo-full.png";
 import type { ChannelVM, UIStatus } from "@/types";
 import type { Role } from "@/hooks/useSession";
@@ -11,6 +12,7 @@ export interface SidebarCounts {
   mine: number;
   all: number;
   byChannel: Record<string, number>;
+  byTag: Record<string, number>;
 }
 
 interface SidebarProps {
@@ -23,6 +25,10 @@ interface SidebarProps {
   channelSel: string[];
   toggleChannel: (id: string) => void;
   clearChannels: () => void;
+  tags: string[];
+  tagSel: string[];
+  toggleTag: (t: string) => void;
+  clearTags: () => void;
   role: Role;
   onOpenCanned: () => void;
   onOpenAI: () => void;
@@ -45,6 +51,10 @@ export function Sidebar({
   channelSel,
   toggleChannel,
   clearChannels,
+  tags,
+  tagSel,
+  toggleTag,
+  clearTags,
   role,
   onOpenCanned,
   onOpenAI,
@@ -155,6 +165,36 @@ export function Sidebar({
             </button>
           );
         })}
+
+        {tags.length > 0 && (
+          <>
+            <div className="sb-sec">Tag</div>
+            <button
+              className={"sb-item" + (tagSel.length === 0 ? " active" : "")}
+              onClick={clearTags}
+            >
+              <span className="ic">
+                <Ic.Tag size={16} />
+              </span>
+              <span className="lbl">Semua tag</span>
+            </button>
+            {tags.map((t) => {
+              const on = tagSel.includes(t);
+              return (
+                <button
+                  key={t}
+                  className={"sb-item" + (on ? " on" : "")}
+                  onClick={() => toggleTag(t)}
+                  title={t}
+                >
+                  <span className="check">{on && <Ic.Check size={11} />}</span>
+                  <span className={"tag-chip " + tagClass(t)}>{t}</span>
+                  <span className="cnt">{counts.byTag?.[t] || 0}</span>
+                </button>
+              );
+            })}
+          </>
+        )}
 
         {role === "manager" && (
           <>

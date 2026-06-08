@@ -37,7 +37,6 @@ export function ConvItem({
       </div>
       <div className="conv-body">
         <div className="conv-r1">
-          <span className={"st-dot " + c.status} title={c.status} />
           <span className="conv-name">{c.contact.name}</span>
           <span className="conv-time">{c.lastTime}</span>
         </div>
