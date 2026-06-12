@@ -75,6 +75,22 @@ class TestWhatsAppAdapter(InboxTestCase):
             }
             self.assertEqual(self.adapter.parse_inbound(event), [], chat)
 
+    def test_parse_skips_group_via_participant_field(self):
+        # Leak symptom: a group message whose Chat/IsGroup are absent but which
+        # still carries Participant (the member who sent it). Without this guard
+        # it would fall back to the participant's real number and enter the inbox
+        # showing the individual sender's name. Must be skipped.
+        event = {
+            "event": {
+                "Info": {"ID": "GP1",
+                         "Sender": "628111@s.whatsapp.net",
+                         "Participant": "628111@s.whatsapp.net",
+                         "PushName": "Orang di Grup"},
+                "Message": {"conversation": "halo dari grup tanpa Chat"},
+            }
+        }
+        self.assertEqual(self.adapter.parse_inbound(event), [])
+
     def test_parse_skips_from_me(self):
         # Messages sent from the phone (IsFromMe) must NOT enter the inbox.
         event = {

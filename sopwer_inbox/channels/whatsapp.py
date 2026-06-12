@@ -142,9 +142,18 @@ class WhatsAppAdapter(BaseChannelAdapter):
         # and newsletters/channels by their JID server suffix (and whatsmeow's
         # IsGroup flag) — NOT by digit-shape: newer group ids can be all-digits,
         # and a missing Chat would otherwise fall back to the participant's number.
+        #
+        # ``Participant`` is the extra guard for the leak symptom "group message
+        # enters showing the individual sender's name": whatsmeow only populates
+        # Participant for messages that come THROUGH a group (it is the member who
+        # sent it). A normal 1:1 chat never carries Participant. So when some
+        # Wuzapi builds omit Chat/IsGroup but still send Participant, this is the
+        # only signal that the message is from a group — reject on it too.
         raw_src = info.get("Chat") or info.get("Sender") or ""
-        if info.get("IsGroup") or any(
-            s in raw_src for s in ("@g.us", "@broadcast", "@newsletter")
+        if (
+            info.get("IsGroup")
+            or info.get("Participant")
+            or any(s in raw_src for s in ("@g.us", "@broadcast", "@newsletter"))
         ):
             return []
 
