@@ -62,12 +62,18 @@ export function InboxApp() {
   const [modal, setModal] = useState<null | "canned" | "ai">(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [ai, setAi] = useState<AIConfig>({
-    enabled: true,
+    enabled: false,
     provider: "ollama",
     endpoint: "http://localhost:11434",
     model: "llama3.1:8b",
     apiKey: "",
   });
+
+  // Load persisted AI settings once on mount (drives the composer's AI button).
+  useEffect(() => {
+    api.getAiSettings().then(setAi).catch(() => {/* keep defaults (AI off) */});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => setMuted(muted), [muted]);
 
@@ -296,12 +302,14 @@ export function InboxApp() {
     }
   }
 
-  // AI agent-assist — Phase 9 deferred: there is NO AI backend. Surface the
-  // "fitur AI belum aktif" state by rejecting.
-  function suggestReply(): Promise<string> {
-    return new Promise((_resolve, reject) => {
-      setTimeout(() => reject(new Error("ai-not-active")), 700);
-    });
+  // AI agent-assist: ask the backend to draft a reply for the open conversation.
+  // Rejects (→ "fitur AI belum aktif" state in the composer) when AI is off,
+  // misconfigured, or the provider call fails.
+  async function suggestReply(): Promise<string> {
+    if (!selId) throw new Error("no-conversation");
+    const draft = await api.suggestReply(selId);
+    if (!draft) throw new Error("empty-draft");
+    return draft;
   }
 
   async function onStatus(s: ConvStatus) {
@@ -510,6 +518,8 @@ export function InboxApp() {
         <AISettings
           ai={ai}
           onChange={(patch) => setAi((a) => ({ ...a, ...patch }))}
+          onSave={(cfg) => api.saveAiSettings(cfg)}
+          onTest={(cfg) => api.testAi(cfg)}
           onClose={() => setModal(null)}
         />
       )}

@@ -657,6 +657,7 @@ body {
 .test-row { display: flex; align-items: center; gap: 10px; margin-top: 13px; }
 .test-status { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
 .test-status.ok { color: var(--sw-green-700); } .test-status.testing { color: var(--fg-3); }
+.test-status.err { color: var(--sw-red-600, #dc2626); }
 .test-status .d { width: 8px; height: 8px; border-radius: 9999px; background: currentColor; }
 
 /* ── Toasts (incoming chat) ── */

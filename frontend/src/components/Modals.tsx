@@ -184,17 +184,34 @@ export interface AIConfig {
 interface AISettingsProps {
   ai: AIConfig;
   onChange: (patch: Partial<AIConfig>) => void;
+  /** Persist the config. Resolves on success, rejects on failure. */
+  onSave: (ai: AIConfig) => Promise<unknown>;
+  /** Ping the provider with the (possibly unsaved) config. Rejects on failure. */
+  onTest: (ai: AIConfig) => Promise<unknown>;
   onClose: () => void;
 }
 
-export function AISettings({ ai, onChange, onClose }: AISettingsProps) {
-  const [test, setTest] = useState<"idle" | "testing" | "ok">("idle");
+export function AISettings({ ai, onChange, onSave, onTest, onClose }: AISettingsProps) {
+  const [test, setTest] = useState<"idle" | "testing" | "ok" | "err">("idle");
+  const [saving, setSaving] = useState(false);
   const isCloud = ai.provider !== "ollama";
 
-  // AI backend is Phase 9 (deferred) — "Tes koneksi" simulates the UX only.
+  // Ping the provider for real via the backend test endpoint.
   function runTest() {
     setTest("testing");
-    setTimeout(() => setTest("ok"), 1300);
+    onTest(ai)
+      .then(() => setTest("ok"))
+      .catch(() => setTest("err"));
+  }
+
+  async function saveAndClose() {
+    setSaving(true);
+    try {
+      await onSave(ai);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   }
 
   const PROVIDERS = [
@@ -363,13 +380,28 @@ export function AISettings({ ai, onChange, onClose }: AISettingsProps) {
                     Menghubungi provider…
                   </span>
                 )}
+                {test === "err" && (
+                  <span className="test-status err">
+                    <span className="d" />
+                    Koneksi gagal · cek provider, model & API key
+                  </span>
+                )}
               </div>
             </div>
           </div>
         </div>
         <div className="sheet-foot">
-          <button className="btn btn-primary" onClick={onClose}>
-            Selesai
+          <button className="btn btn-primary" onClick={saveAndClose} disabled={saving}>
+            {saving ? (
+              <>
+                <span className="spin" style={{ display: "inline-flex" }}>
+                  <Ic.Loader size={14} />
+                </span>
+                Menyimpan…
+              </>
+            ) : (
+              "Simpan"
+            )}
           </button>
         </div>
       </div>
